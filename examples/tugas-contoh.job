@@ -1,0 +1,17 @@
+# Contoh berkas tugas untuk eksekutor lokal (Jalan 0).
+# Jalankan di Termux:  bash scripts/eksekutor.sh examples/tugas-contoh.job
+# Atau titip ke mode jaga: salin file ini ke ~/muse-droid/antrean/
+#
+# Misi demo yang AMAN dan DETERMINISTIK: lompat langsung ke halaman Bluetooth
+# memakai intent dalam (deep intent), tunggu teksnya terbaca, foto bukti, pulang.
+#
+# Kenapa tidak lewat pintu depan Pengaturan? Karena aplikasi Android membuka
+# kembali HALAMAN TERAKHIR yang dikunjungi (task restoration) — misi yang baik
+# menunjuk langsung ke halaman tujuan.
+
+BUKA android.settings.BLUETOOTH_SETTINGS
+JEDA 2
+TUNGGU_TEKS "Bluetooth" 20
+FOTO demo-pengaturan.png
+CEK_TEKS "Bluetooth"
+TOMBOL home

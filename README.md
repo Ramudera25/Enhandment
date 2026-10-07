@@ -192,15 +192,18 @@ muse-droid/
 │   ├── 06-prasyarat-keamanan-batasan.md
 │   ├── 07-ai-controller.md        ← AI alternatif + kode persiapan controller
 │   ├── 08-misi-lengkap.md         ← SATU misi dibedah nol → beres (+ isi kepala agent)
+│   ├── 09-eksekutor-lokal.md      ← eksekutor di HP: satu berkas tugas per misi
 │   └── troubleshooting.md         ← pohon keputusan bila ada yang macet
 ├── scripts/
 │   ├── setup-termux.sh            ← jalankan DI Termux (HP)
 │   ├── setup-linux.sh             ← jalankan di komputer Linux
 │   ├── setup-windows.ps1          ← jalankan di PowerShell (Windows)
-│   └── hp.sh                      ← perintah seragam kendali HP untuk AI (rish/adb)
+│   ├── hp.sh                      ← perintah seragam kendali HP untuk AI (rish/adb)
+│   └── eksekutor.sh               ← eksekutor lokal di HP: jalankan berkas .job (bab 09)
 └── examples/
     ├── cek-koneksi.sh             ← verifikasi 4 syarat jalur utama
-    └── sesi-contoh.md             ← transkrip sesi nyata (tersanitasi)
+    ├── sesi-contoh.md             ← transkrip sesi nyata (tersanitasi)
+    └── tugas-contoh.job           ← contoh berkas tugas eksekutor (misi demo aman)
 ```
 
 ## Keamanan, singkat saja

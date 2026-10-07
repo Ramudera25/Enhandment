@@ -72,6 +72,21 @@ cat ~/.ssh/termux_hp.pub                          # kunci publik — boleh dibag
 # di Termux: cat kunci.pub >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys
 ```
 
+## Eksekutor lokal — titip satu misi, bukan per langkah
+
+```bash
+# di HP (Termux): jalankan satu berkas tugas
+bash scripts/eksekutor.sh examples/tugas-contoh.job
+
+# mode residen: eksekutor menunggu tugas di folder antrean
+bash scripts/eksekutor.sh --jaga
+
+# dari mesin agent: titip tugas, ambil hasilnya nanti
+scp misi.job termux-hp:'~/muse-droid/antrean/'
+```
+
+Bahasa tugas & desainnya: [docs/09-eksekutor-lokal.md](docs/09-eksekutor-lokal.md).
+
 ## Pertolongan pertama
 
 | Keadaan | Perintah / tindakan |
