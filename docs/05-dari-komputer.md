@@ -1,5 +1,9 @@
 # 05 — Dari Komputer: Apakah Sama?
 
+> 📦 **Bahasa bayi:** Sama persis. Dari komputer, pintunya malah sudah setengah
+> terbuka: kabel USB + ADB langsung memberi kunci gudang, tanpa perlu satpam
+> (Shizuku) dan tanpa ruang kerja (Termux). Sopirnya saja yang pindah tempat duduk.
+
 **Jawaban singkat: ya, sama — bahkan pintunya lebih mudah.**
 
 Dari komputer (Windows/macOS/Linux), pengendali tidak perlu Shizuku maupun Termux

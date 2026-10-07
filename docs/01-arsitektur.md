@@ -1,5 +1,10 @@
 # 01 — Arsitektur
 
+> 📦 **Bahasa bayi:** Sopir (AI) tidak pernah masuk rumah lewat jendela. Ia masuk
+> lewat pintu (SSH), memanggil satpam (Shizuku via `rish`), meminjam kunci gudang
+> (uid shell), lalu bekerja dengan mata (`uiautomator`) dan tangan (`input`).
+> Bab ini menggambar rumahnya lantai per lantai.
+
 ## Prinsip dasar
 
 Android mengenal identitas khusus `shell` (uid 2000), dipakai oleh ADB dan tool bawaan

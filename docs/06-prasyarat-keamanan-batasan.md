@@ -1,5 +1,10 @@
 # 06 — Prasyarat, Keamanan, Batasan
 
+> 📦 **Bahasa bayi:** Empat hal harus hidup bersamaan: jalan tol tersambung,
+> pintu terpasang dan terbuka, satpam sedang bertugas, dan pintu rumah tidak
+> dikunci dari dalam (layar tidak terkunci). Bab ini juga soal siapa saja yang
+> boleh memegang kunci rumahmu — dan apa yang sopir tidak akan pernah lakukan.
+
 ## Prasyarat operasional (jalur utama)
 
 Empat syarat di sisi HP, semuanya harus benar **bersamaan**:

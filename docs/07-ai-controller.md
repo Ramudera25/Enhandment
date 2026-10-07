@@ -1,5 +1,10 @@
 # 07 — AI Controller: Siapa Otaknya?
 
+> 📦 **Bahasa bayi:** Mobilnya (HP + kuasa shell) tidak peduli siapa sopirnya.
+> Muse bisa, Hermes bisa, OpenCode bisa — syaratnya cuma dua: sopirnya bisa
+> menyuruh lewat perintah shell, dan bisa membaca daftar isi layar. Ganti sopir,
+> rumah dan jalannya tidak berubah.
+
 Kendali HP ini **tidak terikat pada satu AI**. Syaratnya cuma dua:
 
 1. AI-nya bisa **menjalankan perintah shell** (SSH / adb / lokal), dan

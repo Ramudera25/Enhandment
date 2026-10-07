@@ -1,5 +1,9 @@
 # 03 — Workflow
 
+> 📦 **Bahasa bayi:** Sopir yang baik tidak asal menekan tombol. Urutannya selalu:
+> lihat dulu, pikir sebentar, gerak satu langkah, lalu lihat lagi untuk memastikan.
+> Bab ini adalah buku catatannya — termasuk kapan ia harus berhenti dan melapor.
+
 Loop kendali agent untuk menyelesaikan satu tugas di aplikasi Android, langkah demi langkah.
 Contoh berjalan: **mengirim lamaran lewat aplikasi lowongan** (alur yang terverifikasi nyata).
 

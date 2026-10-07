@@ -1,5 +1,20 @@
 # muse-droid
 
+```
+███╗   ███╗██╗   ██╗███████╗███████╗      ██████╗ ██████╗  ██████╗ ██╗██████╗
+████╗ ████║██║   ██║██╔════╝██╔════╝      ██╔══██╗██╔══██╗██╔═══██╗██║██╔══██╗
+██╔████╔██║██║   ██║███████╗█████╗  █████╗██║  ██║██████╔╝██║   ██║██║██║  ██║
+██║╚██╔╝██║██║   ██║╚════██║██╔══╝  ╚════╝██║  ██║██╔══██╗██║   ██║██║██║  ██║
+██║ ╚═╝ ██║╚██████╔╝███████║███████╗      ██████╔╝██║  ██║╚██████╔╝██║██████╔╝
+╚═╝     ╚═╝ ╚═════╝ ╚══════╝╚══════╝      ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ ╚═╝╚═════╝
+        HP Android bekerja sendiri — dikendalikan AI, tanpa root.
+```
+
+![status](https://img.shields.io/badge/status-terverifikasi%20di%20perangkat%20nyata-brightgreen)
+![root](https://img.shields.io/badge/root-tidak%20perlu-blue)
+![bahasa](https://img.shields.io/badge/bahasa-Indonesia-orange)
+![lisensi](https://img.shields.io/badge/lisensi-MIT-lightgrey)
+
 **HP Android kamu bisa bekerja sendiri — dikendalikan AI, tanpa root, tanpa perlu kamu pegang.**
 
 Kamu tidur, HP-mu melamar kerja. Kamu ngopi, HP-mu mengisi formulir. Terdengar seperti
@@ -23,6 +38,32 @@ cara mengulanginya, langkah demi langkah, untuk pemula sekalipun.
 > **melihat layar** dan **menyentuh layar**. Sisanya cuma soal pintu masuk.
 
 Cerita selesai. Selebihnya dokumen ini soal **kinerja otomasinya** — bukan soal saya.
+
+> 📦 **Bahasa bayi (dipakai konsisten di seluruh repo):**
+> HP itu **rumah**. SSH itu **pintunya**, kunci SSH itu **kunci rumahnya**.
+> Termux itu **ruang kerja** di dalam rumah. Shizuku itu **satpam baik** yang tinggal
+> di dalam dan memegang kunci gudang; `rish` itu **cara memanggil satpamnya**.
+> Kunci gudang itu namanya **uid shell** — izin resmi menyentuh layar.
+> `uiautomator` itu **mata** ("HP, kamu lagi menampilkan apa?"), `input` itu **tangan**,
+> `screencap` itu **foto bukti**. AI itu **sopirnya**: dia yang membaca keadaan dan
+> memutuskan ketukan berikutnya. Kamus lengkapnya: [docs/glosarium.md](docs/glosarium.md).
+
+## Gambar besarnya (satu-satunya gambar yang wajib dipahami)
+
+```
+  🧠 SOPIR (AI agent)
+        │  SSH — masuk lewat pintu
+        ▼
+  🚪 PINTU (Termux + sshd) ──► 🛡️ SATPAM (Shizuku, dipanggil via rish)
+                                        │
+                                        ▼
+                              🔑 uid shell (kuasa layar)
+                                        │
+                    ┌───────────────────┴───────────────────┐
+                    ▼                                       ▼
+          👁️ MATA — uiautomator                 ✋ TANGAN — input
+          "lagi menampilkan apa?"              ketuk • geser • ketik
+```
 
 ## Intinya dalam 30 detik
 
@@ -83,13 +124,27 @@ Detail: [docs/02-tools.md](docs/02-tools.md).
 
 ## Cara kerja agent-nya (loop kendali)
 
+Agent bekerja memutar seperti ini — tidak pernah mengetuk membabi buta:
+
 ```
-baca layar → pikir → ketuk/ketik → baca layar lagi (verifikasi) → catat hasil → ulangi
+        ┌──────────────────────────────────────────────────┐
+        │                                                  │
+        ▼                                                  │
+   ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌────────────────┐
+   │  LIHAT  │───►│  PIKIR  │───►│  GERAK  │───►│ CEK HASILNYA   │
+   │  layar  │    │sebentar │    │ ketuk / │    │ berhasil belum?│
+   └─────────┘    └─────────┘    │  ketik  │    └───────┬────────┘
+                                 └─────────┘            │
+                                              ┌─────────┴─────────┐
+                                              ▼                   ▼
+                                       ✅ beres → SELESAI   ❌ gagal 3× →
+                                                              🛑 LAPOR MANUSIA
 ```
 
-Terdengar lambat? Memang. Agent yang baik tidak mengetuk membabi buta: satu aksi selalu
-diikuti verifikasi. Penjelasan lengkap + kondisi berhenti yang aman:
-[docs/03-workflow.md](docs/03-workflow.md).
+Satu aksi selalu diikuti verifikasi — itulah sebabnya temponya terasa teliti
+(lihat bagian Kekurangan bila ingin tertawa soal ini). Bedah lengkap satu misi nyata
+dari nol sampai selesai: [docs/08-misi-lengkap.md](docs/08-misi-lengkap.md).
+Penjelasan teknis loop-nya: [docs/03-workflow.md](docs/03-workflow.md).
 
 ## AI apa saja yang bisa jadi pengendali?
 
@@ -118,8 +173,10 @@ Panduan + kode persiapan untuk tiap controller: [docs/07-ai-controller.md](docs/
 
 ```
 muse-droid/
-├── README.md
+├── README.md                      ← kamu di sini
+├── CHEATSHEET.md                  ← semua perintah penting, satu halaman
 ├── docs/
+│   ├── glosarium.md               ← kamus bahasa bayi semua istilah
 │   ├── tutorial/                  ← mulai dari sini bila pemula
 │   │   ├── 00-mulai-di-sini.md    ← peta jalan 3 jalur
 │   │   ├── 01-termux.md           ← pasang Termux + sshd
@@ -133,7 +190,9 @@ muse-droid/
 │   ├── 04-alternatif-controller.md← perbandingan pintu: Shizuku vs ADB vs AutoX.js
 │   ├── 05-dari-komputer.md        ← dari PC apakah sama? (ya)
 │   ├── 06-prasyarat-keamanan-batasan.md
-│   └── 07-ai-controller.md        ← AI alternatif + kode persiapan controller
+│   ├── 07-ai-controller.md        ← AI alternatif + kode persiapan controller
+│   ├── 08-misi-lengkap.md         ← SATU misi dibedah nol → beres (+ isi kepala agent)
+│   └── troubleshooting.md         ← pohon keputusan bila ada yang macet
 ├── scripts/
 │   ├── setup-termux.sh            ← jalankan DI Termux (HP)
 │   ├── setup-linux.sh             ← jalankan di komputer Linux

@@ -1,5 +1,9 @@
 # 02 — Tools
 
+> 📦 **Bahasa bayi:** Ini daftar peralatannya sopir: kunci rumah (SSH), jalan tol
+> (Tailscale), bel satpam (`rish`), mata (`uiautomator`), tangan (`input`), dan
+> kamera bukti (`screencap`). Tidak ada alat sihir — semuanya bawaan atau gratis.
+
 Inventaris komponen pada jalur utama (SSH → Termux → Shizuku/`rish`), beserta peran
 dan cara verifikasi cepatnya. Semua nilai contoh memakai placeholder — jangan pernah
 menaruh kredensial/IP pribadi asli di repo.

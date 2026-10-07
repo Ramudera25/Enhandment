@@ -1,5 +1,10 @@
 # 04 — Alternatif Controller
 
+> 📦 **Bahasa bayi:** Rumahnya satu, pintunya banyak. Sopir yang tidak memegang
+> kunci pintu depan (SSH) akan memakai pintu samping (ADB). Robot penghafal
+> (AutoX.js) tinggal di dalam rumah tapi hanya bisa mengulang hafalannya.
+> Kemampuan akhirnya sama: melihat dan menyentuh layar.
+
 Kemampuan akhirnya selalu sama — **lihat layar + sentuh layar** — tetapi "siapa yang
 mengendalikan" dan "lewat pintu apa" bisa berbeda. Dokumen ini memetakan alternatifnya,
 termasuk bila otaknya diganti AI lain (mis. Hermes) atau pendekatannya diganti total.

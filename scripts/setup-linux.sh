@@ -41,4 +41,7 @@ SELESAI. Di HP: aktifkan "USB debugging" (Opsi Pengembang), colok USB, setujui d
 Lalu verifikasi di sini:
     adb devices     → status "device"
     adb shell id    → uid=2000(shell)
+
+Langkah berikutnya: buka docs/tutorial/05-linux.md (Bagian 3 — tes loop penuh),
+lalu docs/07-ai-controller.md untuk memilih otak pengendalinya.
 SELESAI
