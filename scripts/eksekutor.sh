@@ -45,7 +45,12 @@ catat() {  # catat <status> <pesan>
   echo "$baris" >> "$BASE/log/eksekutor.log"
 }
 
-dump_xml() { rish 'uiautomator dump /sdcard/md-dump.xml >/dev/null 2>&1; cat /sdcard/md-dump.xml'; }
+dump_xml() {
+  # Jembatan Download: output rish terpotong di ±8 KB, jadi XML dipindah dulu
+  # sebagai berkas ke Download (bisa ditulis rish), lalu dibaca dari sisi Termux.
+  rish 'uiautomator dump /sdcard/md-dump.xml >/dev/null 2>&1; cp /sdcard/md-dump.xml /sdcard/Download/md-dump.xml >/dev/null 2>&1'
+  cat "/sdcard/Download/md-dump.xml" 2>/dev/null || cat "/storage/emulated/0/Download/md-dump.xml" 2>/dev/null
+}
 
 # cari_titik "teks" -> mencetak "x y" titik tengah elemen berteks itu (substring)
 cari_titik() {

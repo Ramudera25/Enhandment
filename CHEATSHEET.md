@@ -87,6 +87,27 @@ scp misi.job termux-hp:'~/muse-droid/antrean/'
 
 Bahasa tugas & desainnya: [docs/09-eksekutor-lokal.md](docs/09-eksekutor-lokal.md).
 
+## Mata kedua — saat XML buta
+
+```bash
+# peras dump XML jadi daftar elemen ringkas (di mesin agent)
+python3 scripts/mata-dua.py ringkas dump.xml
+
+# grid bernomor di atas screenshot + terjemahkan pilihan sel ke koordinat
+python3 scripts/mata-dua.py kotak layar.png
+python3 scripts/mata-dua.py ketuk layar-kotak.json 27 5
+
+# OCR lokal (teks + koordinatnya)
+python3 scripts/mata-dua.py ocr layar.png
+
+# di HP: foto / mata gerak / telinga notifikasi
+bash scripts/mata.sh foto layar.png
+bash scripts/mata.sh jaga 5 12
+bash scripts/mata.sh notif
+```
+
+Protokol lengkapnya: [docs/10-mata-kedua.md](docs/10-mata-kedua.md).
+
 ## Pertolongan pertama
 
 | Keadaan | Perintah / tindakan |

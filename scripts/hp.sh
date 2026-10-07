@@ -19,10 +19,11 @@ set -u
 MODE="${HP_MODE:-rish}"
 ALIAS="${HP_SSH_ALIAS:-termux-hp}"
 RID="${RISH_APPLICATION_ID:-com.termux}"
+SSH_OPTS="${HP_SSH_OPTS:-}"   # opsi ssh tambahan, mis. "-F /path/config-khusus"
 
 run_remote() {  # jalankan perintah sebagai uid shell lewat pintu terpilih
   case "$MODE" in
-    rish)       ssh -o ConnectTimeout=20 "$ALIAS" "RISH_APPLICATION_ID=$RID ./rish -c '$1'" ;;
+    rish)       ssh $SSH_OPTS -o ConnectTimeout=20 "$ALIAS" "RISH_APPLICATION_ID=$RID ./rish -c '$1'" ;;
     rish-local) RISH_APPLICATION_ID="$RID" "$HOME/rish" -c "$1" ;;
     adb)        adb shell "$1" ;;
     *) echo "HP_MODE tidak dikenal: $MODE (pilih rish | rish-local | adb)" >&2; exit 2 ;;
@@ -32,10 +33,19 @@ run_remote() {  # jalankan perintah sebagai uid shell lewat pintu terpilih
 cmd="${1:-}"; shift || true
 case "$cmd" in
   id)   run_remote 'id' ;;
-  dump) run_remote 'uiautomator dump /sdcard/window_dump.xml >/dev/null; cat /sdcard/window_dump.xml' ;;
+  dump) # Jembatan Download: output rish terpotong ±8 KB — XML dipindah sebagai
+        # berkas ke Download dulu, baru dibaca utuh dari sisi Termux/adb.
+        case "$MODE" in
+          rish) run_remote 'uiautomator dump /sdcard/window_dump.xml >/dev/null 2>&1; cp /sdcard/window_dump.xml /sdcard/Download/md-dump.xml >/dev/null 2>&1'
+                ssh $SSH_OPTS -o ConnectTimeout=20 "$ALIAS" 'cat /sdcard/Download/md-dump.xml' ;;
+          rish-local) run_remote 'uiautomator dump /sdcard/window_dump.xml >/dev/null 2>&1; cp /sdcard/window_dump.xml /sdcard/Download/md-dump.xml >/dev/null 2>&1'
+                cat /sdcard/Download/md-dump.xml ;;
+          adb) adb shell 'uiautomator dump /sdcard/window_dump.xml >/dev/null 2>&1'
+               adb exec-out cat /sdcard/window_dump.xml ;;
+        esac ;;
   shot) run_remote "screencap -p /sdcard/hp-shot.png"
         case "$MODE" in
-          rish)       scp -q "$ALIAS":/sdcard/hp-shot.png "${1:-hp-shot.png}" ;;
+          rish)       scp $SSH_OPTS -q "$ALIAS":/sdcard/hp-shot.png "${1:-hp-shot.png}" ;;
           rish-local) cp /sdcard/hp-shot.png "${1:-hp-shot.png}" ;;
           adb)        adb exec-out screencap -p > "${1:-hp-shot.png}" ;;
         esac

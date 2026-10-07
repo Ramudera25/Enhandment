@@ -193,13 +193,16 @@ muse-droid/
 │   ├── 07-ai-controller.md        ← AI alternatif + kode persiapan controller
 │   ├── 08-misi-lengkap.md         ← SATU misi dibedah nol → beres (+ isi kepala agent)
 │   ├── 09-eksekutor-lokal.md      ← eksekutor di HP: satu berkas tugas per misi
+│   ├── 10-mata-kedua.md           ← protokol vision: grid bernomor, OCR, mata gerak
 │   └── troubleshooting.md         ← pohon keputusan bila ada yang macet
 ├── scripts/
 │   ├── setup-termux.sh            ← jalankan DI Termux (HP)
 │   ├── setup-linux.sh             ← jalankan di komputer Linux
 │   ├── setup-windows.ps1          ← jalankan di PowerShell (Windows)
 │   ├── hp.sh                      ← perintah seragam kendali HP untuk AI (rish/adb)
-│   └── eksekutor.sh               ← eksekutor lokal di HP: jalankan berkas .job (bab 09)
+│   ├── eksekutor.sh               ← eksekutor lokal di HP: jalankan berkas .job (bab 09)
+│   ├── mata.sh                    ← di HP: foto, mata gerak, ringkasan notifikasi (bab 10)
+│   └── mata-dua.py                ← di mesin agent: peras XML, grid vision, OCR (bab 10)
 └── examples/
     ├── cek-koneksi.sh             ← verifikasi 4 syarat jalur utama
     ├── sesi-contoh.md             ← transkrip sesi nyata (tersanitasi)

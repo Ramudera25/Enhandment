@@ -87,6 +87,12 @@ ssh termux-hp 'ls ~/muse-droid/selesai/ ~/muse-droid/gagal/; cat ~/muse-droid/se
   ini didapat dari uji langsung: demo yang mengasumsikan Pengaturan selalu mulai
   dari halaman utama gagal — ia terbuka di Opsi pengembang, sisa kunjungan lama.
 - Layar terkunci di tengah misi tetap menghentikan misi — fail-fast melaporkannya.
+- **Output lewat rish terpotong di ±8 KB.** Dump XML besar tidak boleh dibaca dari
+  stdout `rish` — ia harus dipindah sebagai berkas lewat **jembatan folder
+  Download** (rish menulis ke Download, sisi Termux membacanya dari sana).
+  `dump_xml()` di skrip ini dan perintah `dump` di `hp.sh` sudah memakai pola itu.
+  Bukti uji langsung: dump 140 KB terbaca utuh lewat jembatan; lewat stdout hanya
+  8 KB yang sampai (elemen layar bawah hilang tanpa pesan kesalahan).
 
 ## Ke mana setelah Jalan 0
 
