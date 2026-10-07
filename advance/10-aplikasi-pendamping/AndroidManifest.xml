@@ -4,6 +4,10 @@
 
     <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34" />
 
+    <!-- WAJIB untuk ServerSocket lokal LayananLokal; tanpa ini bind() kena
+         EACCES dan thread pendengar membunuh proses (terbukti 8 Okt 2026). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application android:label="muse-droid Pendamping"
         android:theme="@android:style/Theme.Material.Light">
         <activity android:name=".MainActivity" android:exported="true">

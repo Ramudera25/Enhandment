@@ -13,7 +13,7 @@ muse-droid, dan **belum semuanya diuji di perangkat**. Aturannya sederhana:
 
 | # | Peningkatan | Isi | Bentuk | Bukti yang dibutuhkan untuk lulus |
 |---|---|---|---|---|
-| 01 | Server residen di HP (Jalan 1) | `01-server-residen/` | Skrip + klien Python | **DIUJI 7 Okt: BELUM LULUS** — app_process murni crash SIGABRT di HP ini; jalur benar = instrumentasi (sesi khusus). Skrip diperbaiki (berkas lokal, kelas Main, TMPDIR). PENGUJIAN.md Fase 8 |
+| 01 | Server residen di HP (Jalan 1) | `01-server-residen/` | Skrip + klien Python | **Teruji ✓ 8 Okt** — resep benar dari sumber uiautomator2 (u2.jar + com.wetest.uia2.Main): PING 0,01 dtk, DUMP 0,56 dtk (±20–35× cara lama); `mulai-server.sh` ditulis ulang. PENGUJIAN.md Fase 8 |
 | 02 | Crop fokus untuk vision | `02-crop-fokus.py` | Alat Python (PIL) | **Teruji ✓ 8 Okt** — 2 target berglif jelas: selisih 8px & 23px (ambang 30px); kasus tepi: node teks selebar baris. PENGUJIAN.md Fase 4 |
 | 03 | Peta layar tersimpan | `03-peta-layar.py` | Alat Python + JSON | **Teruji ✓ 8 Okt** — catat/cari/lupakan persis; ketuk basi (daftar dinamis) pulih lewat alur resminya. PENGUJIAN.md Fase 5 |
 | 04 | Router model bertingkat | `04-router-model.py` | Kebijakan + klasifikasi | **DIUJI 7 Okt: LULUS BERSYARAT** — klasifikasi 10/10; RUTIN & VISION terhubung nyata; tier RENCANA `utama` butuh anggaran token besar. PENGUJIAN.md Fase 7 |
@@ -22,7 +22,7 @@ muse-droid, dan **belum semuanya diuji di perangkat**. Aturannya sederhana:
 | 07 | Memori resep | `07-resep.py` + `resep/` | Alat Python | **Teruji ✓ 8 Okt** — resep "buka-layar" dipakai ulang (parameter Bluetooth) & beres. PENGUJIAN.md Fase 6 |
 | 08 | Basis pengetahuan per aplikasi | `08-pengetahuan/` | Berkas catatan | Terisi dari pengalaman; dibaca sebelum misi |
 | 09 | Perencana + dry-run | `09-perencana.py` | Alat Python | **Teruji ✓ 8 Okt** — rantai penuh susun→uji (negatif tertangkap)→jalan→simpan→pakai→jalan. PENGUJIAN.md Fase 6 |
-| 10 | Aplikasi pendamping Shizuku (Jalan 2) | `10-aplikasi-pendamping/` | Kerangka Kotlin + `build.sh` | **BUILD LULUS 7 Okt** — APK 700 KB tertandatangani tanpa Gradle; pasang + endpoint menunggu layar dibuka. PENGUJIAN.md Fase 9 |
+| 10 | Aplikasi pendamping Shizuku (Jalan 2) | `10-aplikasi-pendamping/` | Kerangka Kotlin + `build.sh` | **Terpasang ✓ 8 Okt** — PING → PONG di 127.0.0.1:19101; 3 cacat build diperbaiki (UI, artefak aidl, izin INTERNET); DUMP stub; izin Shizuku menunggu restart server. PENGUJIAN.md Fase 9 |
 
 ## Kenapa tidak langsung jadi v2?
 

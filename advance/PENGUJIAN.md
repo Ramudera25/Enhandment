@@ -108,23 +108,44 @@ langkah rencana yang dirutekan ke `utama` WAJIB anggaran token besar atau
 alias lain. Catatan harness: router mengklasifikasi berdasar JENIS langkah
 (argumen pertama), bukan kalimat bebas.
 
-**Fase 8 — 01 server residen: BELUM LULUS (temuan penting).** Asumsi
-peluncuran prototipe **gugur di perangkat ini**: `app_process` menjalankan
-`com.github.uiautomator.Main` dari APK atx → **crash SIGABRT (exit 134)**
-tanpa keluaran. Server atx yang benar berjalan lewat instrumentasi
-(`am instrument` + APK pasangan). Perbaikan skrip selama uji (terverifikasi
-membantu, bukan menyembuhkan): JAR_URL menerima berkas lokal, kelas utama
-dikoreksi ke `com.github.uiautomator.Main`, jalur staging memakai
-`${TMPDIR}` khas Termux. Jalur instrumentasi = sesi khusus berikutnya.
-Desain fallback terbukti bijak: eksekutor cara lama tetap tulang punggung.
+**Fase 8 — 01 server residen: LULUS (8 Okt pagi, resep dikoreksi dari
+sumbernya).** Asumsi peluncuran prototipe memang gugur (SIGABRT, lihat
+riwayat di bawah) — tapi penyebabnya kini pasti: **artefak + kelas yang
+salah.** Dari kode sumber uiautomator2 3.7.0 (`core.py`): server resminya
+adalah **u2.jar** (aset wheel pip) dengan kelas utama
+**`com.wetest.uia2.Main`**, diluncurkan
+`CLASSPATH=/data/local/tmp/u2.jar app_process / com.wetest.uia2.Main -p 9008`.
+APK atx (`app-uiautomator.apk`) tidak menyatakan `<instrumentation>` sama
+sekali — jalur instrumentasi yang diduga sebelumnya juga bukan jalurnya.
+Dengan resep benar, murni lewat rish (tanpa ADB): server **hidup**,
+terlepas rapi sebagai anak init, log "http server listening on *:9008".
+Terukur di perangkat yang sama: **PING 0,01–0,02 dtk**; **DUMP hierarki
+83 KB dalam 0,56 dtk** (cara lama 11–19,6 dtk — **±20–35× lebih cepat**);
+klien repo `server-hp.py` menjawab dari VM lewat forward SSH (ping =
+info perangkat; dump = XML penuh). Jejak RAM ±94 MB (VmRSS). Server tetap
+hidup melewati kematian Shizuku di sesi yang sama — bukti awal daya
+tahan; pengamatan 60 menit penuh menyusul dari pemakaian. `mulai-server.sh`
+ditulis ulang ke resep terbukti ini. Riwayat temuan lama: peluncuran
+`com.github.uiautomator.Main` dari APK atx → crash SIGABRT (exit 134).
 
-**Fase 9 — 10 aplikasi pendamping: BUILD LULUS.** Tanpa Gradle (kotlinc →
-d8 → aapt2 → zipalign → apksigner; resep di `build.sh` folder ini):
-**APK 700.837 byte**, paket `id.musedroid.pendamping`, minSdk 24,
-targetSdk 34, MainActivity launcher, tanda tangan terverifikasi. Toolchain
-di VM: JDK 17 + SDK android-34 dirakit dari zip resmi (sdkmanager menyerah
-pada proxy egress VM — `NoSuchElementException` saat mengambil repositori).
-Sisa fase: pasang + bukti PING/DUMP — menunggu layar dibuka.
+**Fase 9 — 10 aplikasi pendamping: LULUS BERSYARAT (8 Okt pagi).**
+Build tanpa Gradle lulus sejak semalam (APK `id.musedroid.pendamping`,
+resep `build.sh` folder ini); sesi ini: **terpasang lewat rish** dan
+**endpoint lokalnya menjawab: PING → PONG** di 127.0.0.1:19101; **DUMP
+menjawab jujur "GAGAL belum disambungkan (kerangka)"** — saluran
+perintahnya terbukti ujung-ke-ujung, penangan DUMP memang menunggu
+penyambungan UserService Shizuku. Tiga cacat build pertama ditemukan &
+diperbaiki di sesi ini: (1) UI kerangka tak pernah dipasang — kini layar
+status + 2 tombol nyata; (2) **artefak `dev.rikka.shizuku:aidl` hilang
+dari dex** → crash NoClassDefFoundError `IShizukuApplication$Stub` saat
+menyentuh API Shizuku — kini masuk build.sh; (3) **izin INTERNET hilang
+dari manifest** → bind ServerSocket kena EACCES dan proses mati berulang
+— kini dinyatakan. Port layanan dibuat tetap (19101). Satu kaki tersisa:
+**izin Shizuku untuk aplikasi ini** — binder tidak dikirim ke aplikasi
+yang dipasang SESUDAH server Shizuku start (perilaku Shizuku); Sui.init
+sudah ditanam sebagai jalan pintas, verifikasi finalnya menunggu satu
+restart Shizuku oleh Travis, lalu: buka aplikasi → status "hidup" →
+ketuk Minta Izin → Allow.
 
 **Kejadian sesi yang tercatat jujur:** /tmp VM (tmpfs 512 MB) sempat penuh
 100% oleh zip SDK → 3 berkas uji terkirim 0 byte ke HP (terdeteksi dari
@@ -137,7 +158,17 @@ total akibat badai polling TUNGGU_TEKS — dihidupkan ulang Travis dari
 aplikasi Shizuku; perbaikan tempo polling 8 dtk kini permanen di
 eksekutor; (2) tumpukan halaman Pengaturan memulihkan halaman lama
 (restoration) — BUKA intent dalam tidak selalu menavigasi ulang bila
-task sudah ada; misi uji sebaiknya sadar halaman awal. Yang masih
-menunggu sesi khusus: Fase 8 jalur instrumentasi (APK pasangan) dan
-Fase 9 pasang APK pendamping + bukti PING/DUMP — keduanya kini tinggal
-menunggu sesi layar berikutnya, tanpa penghalang teknis baru.
+task sudah ada; misi uji sebaiknya sadar halaman awal.
+
+**Sesi penutup 8 Okt pagi (atas perintah Travis: "lanjut fase 8 dan 9
+baru kita akan push ini"):** Fase 8 LULUS dan Fase 9 LULUS BERSYARAT —
+**seluruh Fase 0–9 kini punya hasil uji nyata.** Di akhir sesi server
+Shizuku mati sekali lagi di tengah keramaian pasang-ulang APK (rish
+menolak menjawab; aplikasi Shizuku menampilkan tombol Start) — kerapuhan
+server Shizuku di HP ini kini tercatat tiga kali dalam dua hari dan
+menjadi konteks penting membaca semua hasil: jalur rish bergantung pada
+layanan yang bisa mati oleh tekanan sistem, sementara server residen
+Fase 8 (proses app_process biasa) terbukti tetap hidup melewatinya.
+Sisa tindak lanjut tunggal: restart Shizuku oleh Travis →
+verifikasi kaki izin aplikasi pendamping (status + Allow) dalam sekali
+buka. Sesudah itu repo siap push.

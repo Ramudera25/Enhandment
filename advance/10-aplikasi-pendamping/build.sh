@@ -12,6 +12,10 @@ BT="$SDK/build-tools/34.0.0"
 AJAR="$SDK/platforms/android-34/android.jar"
 API=dl/shizuku-aar/classes.jar
 PROV=dl/shizuku-provider/classes.jar
+AIDL=dl/shizuku-aidl/classes.jar
+# AIDL WAJIB: stub moe.shizuku.server.* tinggal di artefak dev.rikka.shizuku:aidl.
+# Tanpa ini APK terpasang tapi crash NoClassDefFoundError saat menyentuh API
+# Shizuku (terbukti di perangkat 8 Okt 2026).
 STDLIB=kotlinc/lib/kotlin-stdlib.jar
 
 rm -rf out && mkdir -p out/classes out/dex src
@@ -19,11 +23,11 @@ cp ~/workspace/muse-droid/advance/10-aplikasi-pendamping/MainActivity.kt \
    ~/workspace/muse-droid/advance/10-aplikasi-pendamping/LayananLokal.kt src/
 
 echo "== kotlinc =="
-kotlinc/bin/kotlinc src/*.kt -classpath "$AJAR:$API:$PROV" -d out/classes
+kotlinc/bin/kotlinc src/*.kt -classpath "$AJAR:$API:$PROV:$AIDL" -d out/classes
 
 echo "== d8 =="
 "$BT/d8" --lib "$AJAR" --output out/dex \
-  $(find out/classes -name '*.class') "$STDLIB" "$API" "$PROV"
+  $(find out/classes -name '*.class') "$STDLIB" "$API" "$PROV" "$AIDL"
 
 echo "== aapt2 link =="
 "$BT/aapt2" link -o out/app-unsigned.apk -I "$AJAR" \

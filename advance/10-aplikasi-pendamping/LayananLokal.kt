@@ -23,6 +23,8 @@ import kotlin.concurrent.thread
 
 class LayananLokal : Service() {
 
+    companion object { const val PORT = 19101 }  // port tetap (TODO lama selesai, build 8 Okt 2026)
+
     @Volatile private var jalan = false
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -34,7 +36,7 @@ class LayananLokal : Service() {
     }
 
     private fun dengarkan() {
-        ServerSocket(0 /* TODO: port tetap dari konfigurasi */, 50,
+        ServerSocket(PORT, 50,
             java.net.InetAddress.getByName("127.0.0.1")).use { server ->
             while (jalan) {
                 val klien = server.accept()

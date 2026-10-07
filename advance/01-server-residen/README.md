@@ -1,7 +1,9 @@
 # 01 — Server Residen di HP (Jalan 1)
 
-> Status: **prototipe** — belum diuji di perangkat. Bagian dari folder `advance/`
-> (lihat [../README.md](../README.md)).
+> Status: **TERUJI di perangkat (8 Okt 2026)** — server hidup lewat rish,
+> PING 0,01–0,02 dtk, DUMP 0,56 dtk (cara lama 11–19,6 dtk).
+> Resep peluncuran yang terbukti ada di `mulai-server.sh`; hasil lengkap
+> di [../PENGUJIAN.md](../PENGUJIAN.md) Fase 8. Bagian dari folder `advance/`.
 
 ## Masalahnya
 

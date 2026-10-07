@@ -1,7 +1,10 @@
 # 10 — Aplikasi Pendamping Shizuku (Jalan 2, target v2)
 
-> Status: **kerangka sumber (skeleton)** — belum dibuild, belum ada APK.
-> Bagian dari folder `advance/`.
+> Status: **terpasang & endpoint hidup (8 Okt 2026)** — APK terbangun,
+> terpasang lewat rish, PING → PONG di 127.0.0.1:19101; DUMP masih stub
+> jujur; kaki izin Shizuku menunggu satu restart server (binder tidak
+> dikirim ke aplikasi yang dipasang sesudah server start). Hasil lengkap
+> di [../PENGUJIAN.md](../PENGUJIAN.md) Fase 9. Bagian dari folder `advance/`.
 
 ## Kenapa aplikasi sendiri?
 
