@@ -1,0 +1,15 @@
+# Jangan pernah commit rahasia / data pribadi
+*.key
+*.pem
+authorized_keys
+.ssh/
+*.env
+
+# Artefak sesi
+*.png
+window_dump.xml
+dump*.xml
+
+# OS / editor
+.DS_Store
+*.swp
