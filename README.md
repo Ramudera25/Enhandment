@@ -203,10 +203,21 @@ muse-droid/
 │   ├── eksekutor.sh               ← eksekutor lokal di HP: jalankan berkas .job (bab 09)
 │   ├── mata.sh                    ← di HP: foto, mata gerak, ringkasan notifikasi (bab 10)
 │   └── mata-dua.py                ← di mesin agent: peras XML, grid vision, OCR (bab 10)
-└── examples/
-    ├── cek-koneksi.sh             ← verifikasi 4 syarat jalur utama
-    ├── sesi-contoh.md             ← transkrip sesi nyata (tersanitasi)
-    └── tugas-contoh.job           ← contoh berkas tugas eksekutor (misi demo aman)
+├── examples/
+│   ├── cek-koneksi.sh             ← verifikasi 4 syarat jalur utama
+│   ├── sesi-contoh.md             ← transkrip sesi nyata (tersanitasi)
+│   └── tugas-contoh.job           ← contoh berkas tugas eksekutor (misi demo aman)
+└── advance/                       ← ruang pengembangan menuju v2 (belum resmi):
+    ├── 01-server-residen/           server UiAutomator menetap di HP (Jalan 1)
+    ├── 02-crop-fokus.py             potong screenshot di sekitar fokus utk vision
+    ├── 03-peta-layar.py             cache koordinat elemen per aplikasi
+    ├── 04-router-model.py           model bertingkat: mudah jangan bayar mahal
+    ├── 05-batch.sh                  banyak misi dalam satu sesi bangun HP
+    ├── 06-penjaga.sh                watchdog prasyarat (sshd + Shizuku)
+    ├── 07-resep.py                  memori resep misi yang terbukti berhasil
+    ├── 08-pengetahuan/              catatan kebiasaan per aplikasi
+    ├── 09-perencana.py              susun misi + dry-run sebelum eksekusi
+    └── 10-aplikasi-pendamping/      kerangka aplikasi Shizuku (Jalan 2, target v2)
 ```
 
 ## Keamanan, singkat saja
