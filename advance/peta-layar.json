@@ -2,5 +2,9 @@
  "com.android.settings|Bluetooth": {
   "x": 264,
   "y": 204
+ },
+ "com.android.settings|Add network": {
+  "x": 302,
+  "y": 1387
  }
 }

@@ -104,8 +104,8 @@ jalankan_job() {  # jalankan_job <file.job> -> 0 sukses, 1 gagal
         [[ "$to" =~ ^[0-9]+$ ]] || to=30
         local tunggu=0
         until teks_tampil "$teks"; do
-          tunggu=$((tunggu+2)); [ "$tunggu" -ge "$to" ] && { langkah_gagal "$langkah" "TUNGGU_TEKS \"$teks\" timeout ${to}d"; return 1; }
-          sleep 2
+          tunggu=$((tunggu+10)); [ "$tunggu" -ge "$to" ] && { langkah_gagal "$langkah" "TUNGGU_TEKS \"$teks\" timeout ${to}d"; return 1; }
+          sleep 8   # jeda wajar antar-dump: polling rapat terbukti menumbangkan uiautomator/Shizuku (uji 7-8 Okt)
         done
         catat "OK" "$langkah TUNGGU_TEKS \"$teks\" (tampil setelah ±${tunggu}d)" ;;
       KETUK_TEKS)

@@ -1,0 +1,5 @@
+# MISI: Buka halaman pengaturan dan buktikan tampil
+BUKA {{TARGET}}
+TUNGGU_TEKS "{{TEKS}}" 40
+FOTO {{FOTO}}
+TOMBOL home

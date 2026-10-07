@@ -14,14 +14,14 @@ muse-droid, dan **belum semuanya diuji di perangkat**. Aturannya sederhana:
 | # | Peningkatan | Isi | Bentuk | Bukti yang dibutuhkan untuk lulus |
 |---|---|---|---|---|
 | 01 | Server residen di HP (Jalan 1) | `01-server-residen/` | Skrip + klien Python | **DIUJI 7 Okt: BELUM LULUS** — app_process murni crash SIGABRT di HP ini; jalur benar = instrumentasi (sesi khusus). Skrip diperbaiki (berkas lokal, kelas Main, TMPDIR). PENGUJIAN.md Fase 8 |
-| 02 | Crop fokus untuk vision | `02-crop-fokus.py` | Alat Python (PIL) | Potongan + peta balik diuji ke foto nyata |
-| 03 | Peta layar tersimpan | `03-peta-layar.py` | Alat Python + JSON | Ketuk dari peta berhasil di 3 layar berbeda |
+| 02 | Crop fokus untuk vision | `02-crop-fokus.py` | Alat Python (PIL) | **Teruji ✓ 8 Okt** — 2 target berglif jelas: selisih 8px & 23px (ambang 30px); kasus tepi: node teks selebar baris. PENGUJIAN.md Fase 4 |
+| 03 | Peta layar tersimpan | `03-peta-layar.py` | Alat Python + JSON | **Teruji ✓ 8 Okt** — catat/cari/lupakan persis; ketuk basi (daftar dinamis) pulih lewat alur resminya. PENGUJIAN.md Fase 5 |
 | 04 | Router model bertingkat | `04-router-model.py` | Kebijakan + klasifikasi | **DIUJI 7 Okt: LULUS BERSYARAT** — klasifikasi 10/10; RUTIN & VISION terhubung nyata; tier RENCANA `utama` butuh anggaran token besar. PENGUJIAN.md Fase 7 |
-| 05 | Batch banyak misi satu sesi | `05-batch.sh` | Skrip Termux | **UJI 7 Okt TIDAK SAH** — layar HP terkunci di tengah sesi; ulangi setelah layar dibuka. PENGUJIAN.md Fase 3 |
+| 05 | Batch banyak misi satu sesi | `05-batch.sh` | Skrip Termux | **Teruji ✓ 8 Okt** — 3/3 beres; batch 93 dtk vs 97 dtk terpisah (dinding). PENGUJIAN.md Fase 3 |
 | 06 | Penjaga prasyarat (watchdog) | `06-penjaga.sh` | Skrip Termux | **LULUS UJI PERANGKAT 7 Okt** — sshd dibunuh paksa, hidup lagi ≤1 siklus, status akurat. PENGUJIAN.md Fase 1 |
-| 07 | Memori resep | `07-resep.py` + `resep/` | Alat Python | Resep dipakai ulang untuk misi nyata & beres |
+| 07 | Memori resep | `07-resep.py` + `resep/` | Alat Python | **Teruji ✓ 8 Okt** — resep "buka-layar" dipakai ulang (parameter Bluetooth) & beres. PENGUJIAN.md Fase 6 |
 | 08 | Basis pengetahuan per aplikasi | `08-pengetahuan/` | Berkas catatan | Terisi dari pengalaman; dibaca sebelum misi |
-| 09 | Perencana + dry-run | `09-perencana.py` | Alat Python | Dry-run menangkap misi yang salah susun |
+| 09 | Perencana + dry-run | `09-perencana.py` | Alat Python | **Teruji ✓ 8 Okt** — rantai penuh susun→uji (negatif tertangkap)→jalan→simpan→pakai→jalan. PENGUJIAN.md Fase 6 |
 | 10 | Aplikasi pendamping Shizuku (Jalan 2) | `10-aplikasi-pendamping/` | Kerangka Kotlin + `build.sh` | **BUILD LULUS 7 Okt** — APK 700 KB tertandatangani tanpa Gradle; pasang + endpoint menunggu layar dibuka. PENGUJIAN.md Fase 9 |
 
 ## Kenapa tidak langsung jadi v2?

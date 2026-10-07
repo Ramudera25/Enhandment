@@ -54,16 +54,50 @@ tampil ditambahkan: langkah dinyatakan GAGAL bila teks tak terbukti tampil —
 sebelumnya melaporkan OK palsu). Jalan keluar yang terbukti tetap teknik
 manual agen (clipboard + tekan-lama terkoordinat dump segar).
 
-**Fase 3 — 05 batch: UJI TIDAK SAH, harus diulang.** Penyebab eksternal:
-**layar HP terkunci sendiri ±23.30** (timeout saat jeda antar-uji) — semua
-misi menabrak keyguard (BUKA menyala di balik kunci; TUNGGU_TEKS tak pernah
-bisa cocok). Bukan kegagalan produk; bukan pula keberhasilan. Menunggu layar
-dibuka Travis, lalu diulang penuh dengan perbandingan waktunya.
+**Fase 3 — 05 batch: LULUS (diulang 8 Okt pagi, layar terbuka).** Sempat
+gagal lagi di percobaan pertama pagi itu — dan kegagalannya justru
+mengungkap akar masalah lintas-fase: **polling TUNGGU_TEKS eksekutor
+terlalu rapat** (dump penuh tiap ±2 dtk) menumbangkan uiautomator lalu
+**server Shizuku mati total** ("Server is not running"; dihidupkan ulang
+Travis dari aplikasi Shizuku). Perbaikan permanen: jeda antar-poll
+TUNGGU_TEKS menjadi **8 detik** (satu dump per ±10 dtk). Sesudah itu:
+3 misi terpisah 3× SSH = **97 dtk**, batch 1× SSH = **93 dtk** dinding
+(82 dtk internal batch) — ketiganya BERES 3/3 di kedua mode, ringkasan
+batch benar, stayon dilepas bersih sesudahnya. Batch menang tipis di
+waktu dinding; menang besar di struktur (satu koneksi, satu bangun).
 
-**Fase 4 & 5 — TERTUNDA** (menunggu layar dibuka; alatnya VM-side siap).
+**Fase 4 — 02 crop fokus: LULUS dengan catatan.** Protokol diperketat:
+crop dipusatkan pada titik yang digeser (+120,+90) dari kebenaran XML
+agar pembacaan crop benar-benar mengukur, bukan menebak pusat. Dua
+target terukur di bawah ambang: teks penjelasan Bluetooth → balik
+(540,535) vs XML (540,558) = **selisih 23px**; judul "Bluetooth" → balik
+(265,212) vs XML (264,204) = **selisih 8px**. Target ketiga (teks "Off")
+adalah kasus tepi metodologi: node teksnya selebar baris — pusat bounds
+XML (491,376) tidak berkorelasi dengan posisi glifnya (di tepi kiri),
+sehingga tidak bisa dilokalisasi secara visual dari crop mana pun.
+Matematika crop+baliknya sendiri eksak (2/2 target berglif jelas).
 
-**Fase 6 — TERTUNDA** (rantai 09+07 menunggu layar; dry-run 09 sudah lulus
-di uji asap).
+**Fase 5 — 03 peta layar: LULUS BERSYARAT.** Mekanik persis: catat dari
+dump → cari mengembalikan koordinat yang sama → lupakan menghapus.
+Kasus basi terjadi SECARA ALAMI: ketuk pertama dari peta ke "Add
+network" meleset — daftar jaringan sedang memindai (baris lebih sedikit
+dari yang tercatat di hierarki) sehingga koordinat hierarki belum
+tergambar penuh di layar. Alur pemulihan sesuai desain — lupakan → dump
+segar → catat ulang → ketuk — membuka formulir "Add network" dengan
+benar (terverifikasi visual). Pelajaran: peta akurat untuk elemen statis;
+daftar dinamis tetap butuh verifikasi sesudah ketuk (yang memang
+dirancang begitu). Tiga layar terverifikasi: Bluetooth, Wi-Fi, formulir
+Add network (About phone terlintasi di tumpukan Pengaturan).
+
+**Fase 6 — rantai 09+07: LULUS PENUH.** Spesifikasi JSON misi Wi-Fi →
+`09 susun` menghasilkan .job rapi berkepala misi → `09 uji` terhadap dump
+Wi-Fi asli: langkah baca LULUS dengan koordinat; uji negatif
+(CEK_TEKS "MustahilXYZ") **tertangkap GAGAL di meja** → eksekutor
+menjalankan .job-nya **BERES 4/4** → `07 simpan` menjadi resep
+"buka-layar" (parameterisasi otomatis: tidak ada — nilai misi diganti
+manual menjadi {{TARGET}}/{{TEKS}}/{{FOTO}}, sesuai tip alatnya) →
+`07 pakai` dengan nilai Bluetooth → `09 uji` LULUS vs dump Bluetooth →
+eksekutor **BERES 4/4**. Indeks resep mencatat pemakaian dengan benar.
 
 **Fase 7 — 04 router: LULUS BERSYARAT.** Klasifikasi jenis-langkah 10/10
 benar terhadap rantai nyata. Tier RUTIN (cadangan-llm7) menjawab 6,5 dtk;
@@ -96,3 +130,14 @@ Sisa fase: pasang + bukti PING/DUMP — menunggu layar dibuka.
 100% oleh zip SDK → 3 berkas uji terkirim 0 byte ke HP (terdeteksi dari
 ukuran, diperbaiki, diulang). Pelajaran: unduhan besar langsung ke
 ~/workspace, bukan /tmp.
+
+**Sesi lanjutan 8 Okt pagi (atas perintah Travis):** Fase 3–6 tuntas
+(hasil di atas). Dua kejadian penting: (1) server Shizuku sempat mati
+total akibat badai polling TUNGGU_TEKS — dihidupkan ulang Travis dari
+aplikasi Shizuku; perbaikan tempo polling 8 dtk kini permanen di
+eksekutor; (2) tumpukan halaman Pengaturan memulihkan halaman lama
+(restoration) — BUKA intent dalam tidak selalu menavigasi ulang bila
+task sudah ada; misi uji sebaiknya sadar halaman awal. Yang masih
+menunggu sesi khusus: Fase 8 jalur instrumentasi (APK pasangan) dan
+Fase 9 pasang APK pendamping + bukti PING/DUMP — keduanya kini tinggal
+menunggu sesi layar berikutnya, tanpa penghalang teknis baru.
