@@ -125,8 +125,31 @@ jalankan_job() {  # jalankan_job <file.job> -> 0 sukses, 1 gagal
         local teks4; teks4="$(tanpa_kutip "$sisa")"
         if command -v termux-clipboard-set >/dev/null 2>&1; then
           printf '%s' "$teks4" | termux-clipboard-set
-          rish 'input keyevent 279' >/dev/null; sleep 1
-          catat "OK" "$langkah TEMPEL (${#teks4} karakter via clipboard)"
+          # keyevent 279 terbukti tidak menempel di banyak aplikasi (Glints,
+          # KitaLulus) — jalan utama: tekan-lama elemen yang sedang fokus,
+          # lalu ketuk menu "Tempel"/"Paste" yang muncul.
+          local dx node b tengah tm cara=""
+          dx="$(dump_xml 2>/dev/null)" || dx=""
+          # utamakan node fokus berkelas EditText — head -1 polos bisa kena
+          # FrameLayout wadah (bounds se-layar, tekan-lamanya tak membuka menu)
+          node="$(printf '%s' "$dx" | grep -o '<node[^>]*focused="true"[^>]*>' | grep -m1 'EditText')" \
+            || node="$(printf '%s' "$dx" | grep -o '<node[^>]*focused="true"[^>]*>' | head -1)"
+          b="$(printf '%s' "$node" | grep -o 'bounds="\[[0-9,]*\]\[[0-9,]*\]"' | head -1)"
+          if [ -n "$b" ]; then
+            tengah="$(printf '%s' "$b" | awk -F'[^0-9]+' '{printf "%d %d", ($2+$4)/2, ($3+$5)/2}')"
+            rish "input swipe $tengah $tengah 600" >/dev/null; sleep 1
+            tm="$(cari_titik "Tempel" 2>/dev/null)" || tm="$(cari_titik "Paste" 2>/dev/null)" || tm=""
+            [ -n "$tm" ] && { rish "input tap $tm" >/dev/null; cara="menu tempel @ $tm"; }
+          fi
+          [ -n "$cara" ] || { rish 'input keyevent 279' >/dev/null; cara="keyevent 279"; }
+          sleep 1
+          # verifikasi jujur: kata pertama teks harus tampil di layar
+          local probe="${teks4%% *}"
+          if teks_tampil "$probe"; then
+            catat "OK" "$langkah TEMPEL (${#teks4} karakter via clipboard, $cara, terverifikasi tampil)"
+          else
+            langkah_gagal "$langkah" "TEMPEL tidak terbukti tampil di layar (cara terakhir: $cara)"; return 1
+          fi
         else
           langkah_gagal "$langkah" "TEMPEL butuh termux-api (termux-clipboard-set tidak ada)"; return 1
         fi ;;
