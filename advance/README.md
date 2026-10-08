@@ -8,6 +8,7 @@ muse-droid, dan **belum semuanya diuji di perangkat**. Aturannya sederhana:
 - Sesuatu lulus dari sini hanya setelah diuji langsung di HP dan terbukti —
   lalu ia dipindah ke `scripts/`/`docs/` dan dicatat di riwayat versi.
 - Urutan uji yang disarankan mengikuti nomornya.
+- **Jurnal pengembangan lengkap** — progres, tantangan, workflow, cara pikir, angka benchmark, bacaan pendamping, dan roadmap: [`LOG-PEMBAHARUAN.md`](LOG-PEMBAHARUAN.md). Ditulis untuk pembaca lanjut & calon pengembang; pemula tidak perlu membacanya.
 
 ## Papan status
 

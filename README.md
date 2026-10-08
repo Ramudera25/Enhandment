@@ -1,14 +1,15 @@
-# muse-droid
+# AI-Handle-it
 
 ```
-███╗   ███╗██╗   ██╗███████╗███████╗      ██████╗ ██████╗  ██████╗ ██╗██████╗
-████╗ ████║██║   ██║██╔════╝██╔════╝      ██╔══██╗██╔══██╗██╔═══██╗██║██╔══██╗
-██╔████╔██║██║   ██║███████╗█████╗  █████╗██║  ██║██████╔╝██║   ██║██║██║  ██║
-██║╚██╔╝██║██║   ██║╚════██║██╔══╝  ╚════╝██║  ██║██╔══██╗██║   ██║██║██║  ██║
-██║ ╚═╝ ██║╚██████╔╝███████║███████╗      ██████╔╝██║  ██║╚██████╔╝██║██████╔╝
-╚═╝     ╚═╝ ╚═════╝ ╚══════╝╚══════╝      ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ ╚═╝╚═════╝
+ ███  █████       █   █  ███  █   █ ████  █     █████       █████ █████
+█   █   █         █   █ █   █ ██  █ █   █ █     █             █     █
+█████   █    ███  █████ █████ █ █ █ █   █ █     ████   ███    █     █
+█   █   █         █   █ █   █ █  ██ █   █ █     █             █     █
+█   █ █████       █   █ █   █ █   █ ████  █████ █████       █████   █
         HP Android bekerja sendiri — dikendalikan AI, tanpa root.
 ```
+
+*(Proyek ini sebelumnya bernama muse-droid — repo, riwayat, dan isinya sama; yang ganti cuma nama panggilan.)*
 
 ![status](https://img.shields.io/badge/status-terverifikasi%20di%20perangkat%20nyata-brightgreen)
 ![root](https://img.shields.io/badge/root-tidak%20perlu-blue)
@@ -38,6 +39,23 @@ cara mengulanginya, langkah demi langkah, untuk pemula sekalipun.
 > **melihat layar** dan **menyentuh layar**. Sisanya cuma soal pintu masuk.
 
 Cerita selesai. Selebihnya dokumen ini soal **kinerja otomasinya** — bukan soal saya.
+
+### Meme dulu, biar tidak tegang
+
+```
+  DI BROWSER                          DI HP ASLI
+  ┌────────────────────┐              ┌────────────────────┐
+  │ Cloudflare:        │              │ Cloudflare:        │
+  │ "KAMU ROBOT, YA?!" │              │ "Loh, ini HP       │
+  │ Lamaran: ✗ ✗ ✗     │              │  beneran. Silakan  │
+  └─────────┬──────────┘              │  masuk, Kak."      │
+            │ pindah jalur            │ Lamaran: ✓ ✓ ✓     │
+            └────────────────────────▶└─────────┬──────────┘
+                                                │
+                                   ( •_•)  ◀ bayu (AI)
+                                  <)   )╯  "saya cuma numpang
+                                  /   \     tangan bos sendiri kok"
+```
 
 > 📦 **Bahasa bayi (dipakai konsisten di seluruh repo):**
 > HP itu **rumah**. SSH itu **pintunya**, kunci SSH itu **kunci rumahnya**.
