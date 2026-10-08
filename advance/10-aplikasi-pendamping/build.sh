@@ -18,12 +18,24 @@ AIDL=dl/shizuku-aidl/classes.jar
 # Shizuku (terbukti di perangkat 8 Okt 2026).
 STDLIB=kotlinc/lib/kotlin-stdlib.jar
 
-rm -rf out && mkdir -p out/classes out/dex src
+rm -rf out && mkdir -p out/classes out/dex out/aidl-java src
 cp ~/workspace/muse-droid/advance/10-aplikasi-pendamping/MainActivity.kt \
-   ~/workspace/muse-droid/advance/10-aplikasi-pendamping/LayananLokal.kt src/
+   ~/workspace/muse-droid/advance/10-aplikasi-pendamping/LayananLokal.kt \
+   ~/workspace/muse-droid/advance/10-aplikasi-pendamping/LayananPriv.kt src/
+cp ~/workspace/muse-droid/advance/10-aplikasi-pendamping/ILayananPriv.aidl src/
+mkdir -p src/id/musedroid/pendamping
+mv src/ILayananPriv.aidl src/id/musedroid/pendamping/ILayananPriv.aidl
+
+echo "== aidl -> java stub =="
+# Antarmuka ILayananPriv (binder UserService) digenerate dari .aidl lalu
+# dikompilasi javac; stub-nya dipakai dua sisi (klien LayananLokal +
+# server LayananPriv) dan WAJIB ikut masuk dex. Berkas .aidl harus
+# tinggal di jalur paketnya (id/musedroid/pendamping/) — syarat alat aidl.
+"$BT/aidl" -Isrc -oout/aidl-java src/id/musedroid/pendamping/ILayananPriv.aidl
+javac -encoding UTF-8 -cp "$AJAR" -d out/classes $(find out/aidl-java -name '*.java')
 
 echo "== kotlinc =="
-kotlinc/bin/kotlinc src/*.kt -classpath "$AJAR:$API:$PROV:$AIDL" -d out/classes
+kotlinc/bin/kotlinc src/*.kt -classpath "$AJAR:$API:$PROV:$AIDL:out/classes" -d out/classes
 
 echo "== d8 =="
 "$BT/d8" --lib "$AJAR" --output out/dex \

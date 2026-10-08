@@ -22,7 +22,7 @@ muse-droid, dan **belum semuanya diuji di perangkat**. Aturannya sederhana:
 | 07 | Memori resep | `07-resep.py` + `resep/` | Alat Python | **Teruji ✓ 8 Okt** — resep "buka-layar" dipakai ulang (parameter Bluetooth) & beres. PENGUJIAN.md Fase 6 |
 | 08 | Basis pengetahuan per aplikasi | `08-pengetahuan/` | Berkas catatan | Terisi dari pengalaman; dibaca sebelum misi |
 | 09 | Perencana + dry-run | `09-perencana.py` | Alat Python | **Teruji ✓ 8 Okt** — rantai penuh susun→uji (negatif tertangkap)→jalan→simpan→pakai→jalan. PENGUJIAN.md Fase 6 |
-| 10 | Aplikasi pendamping Shizuku (Jalan 2) | `10-aplikasi-pendamping/` | Kerangka Kotlin + `build.sh` | **Terpasang ✓ 8 Okt** — PING → PONG di 127.0.0.1:19101; 3 cacat build diperbaiki (UI, artefak aidl, izin INTERNET); DUMP stub; izin Shizuku menunggu restart server. PENGUJIAN.md Fase 9 |
+| 10 | Aplikasi pendamping Shizuku (Jalan 2) | `10-aplikasi-pendamping/` | Kotlin + AIDL + `build.sh` | **TUNTAS 8 Okt** — terdaftar & terotorisasi di Shizuku (kunci: deklarasi API_V23), status "Siap", popup izin otomatis, **UserService tersambung: UID 2000, DUMP XML asli, KETUK/TOMBOL nyata** via socket 127.0.0.1:19101. PENGUJIAN.md Fase 9 + sesi percepatan |
 
 ## Kenapa tidak langsung jadi v2?
 

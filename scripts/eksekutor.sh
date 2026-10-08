@@ -65,7 +65,7 @@ try:
 except Exception:
     pass
 ' 2>/dev/null)"
-  if [ "${via_server#\<?xml}" != "$via_server" ]; then printf '%s' "$via_server"; return 0; fi
+  if [ "${via_server#\<?xml}" != "$via_server" ]; then DUMP_VIA="server"; printf '%s' "$via_server"; return 0; fi
   # Cadangan: jembatan Download (output rish terpotong ±8 KB, XML dipindah
   # sebagai berkas). PENJAGA KESEGARAN: berkas hanya diterima bila mtime-nya
   # MAJU sesudah perintah dump — dump basi pernah menggagalkan TEMPEL
@@ -75,8 +75,52 @@ except Exception:
   rish 'uiautomator dump /sdcard/md-dump.xml >/dev/null 2>&1; cp /sdcard/md-dump.xml /sdcard/Download/md-dump.xml >/dev/null 2>&1'
   local sesudah=""
   [ -f "$berkas" ] && sesudah="$(stat -c %Y "$berkas" 2>/dev/null)"
+  DUMP_VIA="jembatan"
   if [ -n "$sesudah" ] && [ "$sesudah" != "$sebelum" ]; then cat "$berkas" 2>/dev/null; return 0; fi
   cat "$berkas" 2>/dev/null || cat "/storage/emulated/0/Download/md-dump.xml" 2>/dev/null
+}
+
+# --- Tangan server residen (percepatan 8 Okt) ---
+# click/swipe/pressKey lewat JSON-RPC u2: ±0,16-0,4 dtk, lawan 1-2 dtk
+# per panggilan rish (spawn proses). Gagal -> pemanggil jatuh ke rish.
+DUMP_VIA=""
+rpc_u2() { # rpc_u2 <metode> <params-json>
+  python3 -c '
+import json, sys, urllib.request
+op = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+req = urllib.request.Request("http://127.0.0.1:9008/jsonrpc/0",
+  data=json.dumps({"jsonrpc":"2.0","id":1,"method":sys.argv[1],"params":json.loads(sys.argv[2])}).encode(),
+  headers={"Content-Type":"application/json"})
+try:
+    r = json.load(op.open(req, timeout=8))
+    sys.exit(0 if r.get("result") is not None else 1)
+except Exception:
+    sys.exit(1)
+' "$1" "$2" 2>/dev/null
+}
+ketuk_di() { # ketuk_di "x y"
+  local x="${1%% *}" y="${1##* }"
+  rpc_u2 click "[$x,$y]" || rish "input tap $x $y" >/dev/null
+}
+geser_di() { # geser_di "x1 y1 x2 y2 [ms]"
+  set -- $1
+  # Langkah swipe server u2 ≈ 5 ms/langkah (800 ms tekan-lama = 160).
+  # Bagi-10 terbukti kurang panjang: menu tempel tidak muncul (uji 07.30).
+  local langkah=$(( ${5:-300} / 5 )); [ "$langkah" -lt 5 ] && langkah=5
+  rpc_u2 swipe "[$1,$2,$3,$4,$langkah]" || rish "input swipe $*" >/dev/null
+}
+
+# --- Penjaga TARGET (keamanan, 8 Okt) ---
+# Misi boleh menyatakan "TARGET <paket>" (baris direktif, bukan langkah).
+# Sebelum langkah BUTA (KETUK/GESER/KETIK/TOMBOL/TEMPEL) eksekutor
+# memastikan paket target masih ada di hierarki layar; bila layar sudah
+# berpindah tangan (pengguna memakai HP, aplikasi lain di depan), langkah
+# DIBATALKAN dengan GAGAL jujur — pelajaran kejadian 07.34: misi TEMPEL
+# menempel ke bilah alamat Brave yang sedang dipakai pengguna.
+TARGET_MISI=""
+cek_target() {
+  [ -n "$TARGET_MISI" ] || return 0
+  dump_xml 2>/dev/null | grep -q "package=\"$TARGET_MISI\""
 }
 
 # cari_titik "teks" -> mencetak "x y" titik tengah elemen berteks itu (substring)
@@ -104,6 +148,7 @@ langkah_gagal() { catat "GAGAL" "langkah $1: $2 — misi dihentikan."; return 1;
 
 jalankan_job() {  # jalankan_job <file.job> -> 0 sukses, 1 gagal
   local job="$1" baris cmd sisa langkah=0
+  TARGET_MISI=""
   LOGFILE="$BASE/log/$(basename "$job" .job)-$(date '+%Y%m%d-%H%M%S').hasil"
   catat "MULAI" "tugas: $job"
   local siap=0 i
@@ -118,6 +163,7 @@ jalankan_job() {  # jalankan_job <file.job> -> 0 sukses, 1 gagal
   while IFS= read -r baris || [ -n "$baris" ]; do
     baris="${baris%$'\r'}"
     case "$baris" in ''|'#'*) continue ;; esac
+    if [ "${baris%% *}" = "TARGET" ]; then TARGET_MISI="${baris#* }"; catat "INFO" "target misi: $TARGET_MISI"; continue; fi
     langkah=$((langkah+1))
     cmd="${baris%% *}"; sisa="${baris#* }"
     [ "$sisa" = "$baris" ] && sisa=""
@@ -129,26 +175,34 @@ jalankan_job() {  # jalankan_job <file.job> -> 0 sukses, 1 gagal
         local teks to; teks="$(tanpa_kutip "${sisa% *}")"; to="${sisa##* }"
         [ "$to" = "$sisa" ] && to=30
         [[ "$to" =~ ^[0-9]+$ ]] || to=30
-        local tunggu=0
+        local tunggu=0 jeda=8
         until teks_tampil "$teks"; do
-          tunggu=$((tunggu+10)); [ "$tunggu" -ge "$to" ] && { langkah_gagal "$langkah" "TUNGGU_TEKS \"$teks\" timeout ${to}d"; return 1; }
-          sleep 8   # jeda wajar antar-dump: polling rapat terbukti menumbangkan uiautomator/Shizuku (uji 7-8 Okt)
+          # Polling rapat HANYA aman lewat server residen (HTTP, tanpa spawn
+          # uiautomator). Jalur jembatan tetap berjeda 8 dtk — polling rapat
+          # di jalur itu terbukti menumbangkan uiautomator/Shizuku (7-8 Okt).
+          [ "$DUMP_VIA" = "server" ] && jeda=1 || jeda=8
+          tunggu=$((tunggu+jeda)); [ "$tunggu" -ge "$to" ] && { langkah_gagal "$langkah" "TUNGGU_TEKS \"$teks\" timeout ${to}d"; return 1; }
+          sleep $jeda
         done
         catat "OK" "$langkah TUNGGU_TEKS \"$teks\" (tampil setelah ±${tunggu}d)" ;;
       KETUK_TEKS)
         local teks2 titik; teks2="$(tanpa_kutip "$sisa")"
         titik="$(cari_titik "$teks2")" || { langkah_gagal "$langkah" "KETUK_TEKS \"$teks2\" tidak ditemukan di layar"; return 1; }
-        rish "input tap $titik" >/dev/null; sleep 1
+        ketuk_di "$titik"; sleep 1
         catat "OK" "$langkah KETUK_TEKS \"$teks2\" @ $titik" ;;
       KETUK)
-        rish "input tap $sisa" >/dev/null; sleep 1; catat "OK" "$langkah KETUK $sisa" ;;
+        cek_target || { langkah_gagal "$langkah" "TARGET $TARGET_MISI tidak di layar depan — KETUK dibatalkan demi keamanan"; return 1; }
+        ketuk_di "$sisa"; sleep 1; catat "OK" "$langkah KETUK $sisa" ;;
       GESER)
-        rish "input swipe $sisa" >/dev/null; sleep 1; catat "OK" "$langkah GESER $sisa" ;;
+        cek_target || { langkah_gagal "$langkah" "TARGET $TARGET_MISI tidak di layar depan — GESER dibatalkan demi keamanan"; return 1; }
+        geser_di "$sisa"; sleep 1; catat "OK" "$langkah GESER $sisa" ;;
       KETIK)
+        cek_target || { langkah_gagal "$langkah" "TARGET $TARGET_MISI tidak di layar depan — KETIK dibatalkan demi keamanan"; return 1; }
         local teks3; teks3="$(tanpa_kutip "$sisa")"
         rish "input text \"${teks3// /%s}\"" >/dev/null; sleep 1
         catat "OK" "$langkah KETIK (${#teks3} karakter)" ;;
       TEMPEL)
+        cek_target || { langkah_gagal "$langkah" "TARGET $TARGET_MISI tidak di layar depan — TEMPEL dibatalkan demi keamanan"; return 1; }
         local teks4; teks4="$(tanpa_kutip "$sisa")"
         if command -v termux-clipboard-set >/dev/null 2>&1; then
           printf '%s' "$teks4" | termux-clipboard-set
@@ -170,12 +224,12 @@ jalankan_job() {  # jalankan_job <file.job> -> 0 sukses, 1 gagal
           }
           tengah="$(titik_kolom)" || tengah=""
           if [ -n "$tengah" ]; then
-            rish "input tap $tengah" >/dev/null; sleep 2
+            ketuk_di "$tengah"; sleep 2
             tengah="$(titik_kolom)" || tengah=""
             if [ -n "$tengah" ]; then
-              rish "input swipe $tengah $tengah 800" >/dev/null; sleep 1
+              geser_di "$tengah $tengah 800"; sleep 1
               tm="$(cari_titik "Tempel" 2>/dev/null)" || tm="$(cari_titik "Paste" 2>/dev/null)" || tm=""
-              [ -n "$tm" ] && { rish "input tap $tm" >/dev/null; cara="fokus+tekan-lama+menu @ $tm"; }
+              [ -n "$tm" ] && { ketuk_di "$tm"; cara="fokus+tekan-lama+menu @ $tm"; }
             fi
           fi
           [ -n "$cara" ] || { rish 'input keyevent 279' >/dev/null; cara="keyevent 279"; }
@@ -190,9 +244,14 @@ jalankan_job() {  # jalankan_job <file.job> -> 0 sukses, 1 gagal
           langkah_gagal "$langkah" "TEMPEL butuh termux-api (termux-clipboard-set tidak ada)"; return 1
         fi ;;
       TOMBOL)
+        cek_target || { langkah_gagal "$langkah" "TARGET $TARGET_MISI tidak di layar depan — TOMBOL dibatalkan demi keamanan"; return 1; }
         local k
         case "$sisa" in home) k=3 ;; back) k=4 ;; enter) k=66 ;; wakeup) k=224 ;; *) k="$sisa" ;; esac
-        rish "input keyevent $k" >/dev/null; sleep 1; catat "OK" "$langkah TOMBOL $sisa" ;;
+        case "$sisa" in
+          home|back|enter) rpc_u2 pressKey "[\"$sisa\"]" || rish "input keyevent $k" >/dev/null ;;
+          *) rish "input keyevent $k" >/dev/null ;;
+        esac
+        sleep 1; catat "OK" "$langkah TOMBOL $sisa" ;;
       JEDA)
         sleep "$sisa"; catat "OK" "$langkah JEDA ${sisa}d" ;;
       FOTO)

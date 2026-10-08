@@ -228,3 +228,43 @@ pasang resmi proyek ini.
 Catatan kerapuhan tambahan: dump lewat jalur lambat bisa terbaca basi
 (memori halaman lama) bila pengguna sedang aktif mengemudi — verifikasi
 layar sensitif waktu sebaiknya lewat dump server residen (0,56 dtk).
+
+**Sesi percepatan 8 Okt pagi (atas perintah Travis: "lakukan peningkatan
+lagi… potong waktu proses di bawah 1 detik"):**
+(1) **Eksekutor v3 — tangan & mata server.** KETUK/GESER/TOMBOL/TEMPEL
+kini lewat JSON-RPC server residen (click 0,16 dtk, swipe 0,4 dtk,
+pressKey) dengan rish sebagai cadangan; TUNGGU_TEKS polling 1 dtk di
+jalur server (8 dtk tetap di jalur jembatan). Koreksi teknis: langkah
+swipe u2 ≈ 5 ms (bukan 10) — tekan-lama TEMPEL sempat gagal di bagi-10.
+(2) **Penjaga TARGET (keamanan).** Misi boleh membuka baris direktif
+`TARGET <paket>`; sebelum langkah buta, eksekutor memastikan paket itu
+di layar depan, bila tidak misi batal jujur. Lahir dari kejadian nyata
+07.34: misi TEMPEL menempel ke bilah alamat Brave yang sedang dipakai
+Travis (sudah dibersihkan; uji negatif penjaga lulus 07.38 — misi
+bertarget Pengaturan menolak jalan saat Brave di depan).
+(3) **Pintu masuk.** SSH ControlMaster untuk termux-hp & vm-16-77:
+panggilan berulang 4–20 dtk → **±1,5 dtk**. Jalur VM→server lewat
+forward tetap ±2,6 dtk/siklus (pajak RTT proxy) — alasan arsitektural
+eksekusi dipindah ke dalam HP.
+(4) **Aplikasi pendamping — UserService TERSAMBUNG.** AIDL
+`ILayananPriv` (jalankan/dumpXml/uidSaya/destroy) + `LayananPriv`
+(proses uid shell) + LayananLokal mengikatnya via
+`Shizuku.bindUserService`. Terverifikasi di perangkat: **UID → 2000**,
+**DUMP → XML asli 26–62 KB** (pengurai JSON bawaan Android; membuka
+escape manual terbukti kotor), TOMBOL → OK, PING 3 ms, DUMP ±0,5 dtk.
+Aplikasi bukan lagi kerangka: ia pintu lokal berhak shell yang tetap
+menjawab bahkan saat rish tersendat.
+(5) **Benchmark siklus (alat: `advance/01-server-residen/benchmark.py`).**
+Di perangkat, keep-alive: halaman launcher **936/968/960 ms**, halaman
+Wi-Fi (60 KB) **828 ms** — **di bawah 1 detik tercapai** untuk siklus
+dump→klik→dump pada halaman wajar. Kasus terberat teramati: formulir
+berkeyboard (±130 KB) dump tunggal ±0,8 dtk → siklus ±1,7 dtk (lantai
+UiAutomation, dicatat apa adanya).
+(6) **Kesiapan.** `scripts/cek-siap.sh` (papan satu pintu dari VM) +
+`scripts/penjaga-server.sh` (cek/pulihkan server residen dari HP).
+Papan saat sesi ditutup: SSH ✓, u2 ✓, pendamping ✓ (PONG/UID 2000),
+eksekutor ✓; **rish/Shizuku berdenyut** — peringatan resmi Shizuku di
+perangkat menyebut optimasi baterai; perbaikan sisi pengguna: bebaskan
+Termux + Shizuku dari optimasi baterai. Justru di kondisi itu rantai
+baru membuktikan nilainya: server residen + aplikasi pendamping tetap
+bekerja tanpa rish.
