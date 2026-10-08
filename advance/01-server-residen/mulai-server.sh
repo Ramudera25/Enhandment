@@ -30,6 +30,14 @@ if [ "${1:-}" = "--berhenti" ]; then
   exit 0
 fi
 
+# penjaga kaki (Enhandment advance/13): pastikan loop penjaga hidup —
+# ia yang menghidupkan ulang server ini bila mati dan memberi tahu pemilik
+# bila Shizuku mati. Berhenti total: bunuh juga PID di ~/.penjaga-kaki/penjaga.pid.
+if [ -f "$HOME/penjaga-kaki.sh" ] && ! pgrep -f "penjaga-kaki[.]sh" >/dev/null 2>&1; then
+  nohup "$HOME/penjaga-kaki.sh" >/dev/null 2>&1 &
+  echo "penjaga kaki dihidupkan"
+fi
+
 # 1/4 siapkan u2.jar di Termux home
 if [ -f "${JAR_URL:-}" ]; then
   echo "1/4 memakai berkas lokal: $JAR_URL"; cp "$JAR_URL" "$HOME/u2.jar"

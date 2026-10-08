@@ -342,3 +342,21 @@ penjaga berjalan setiap kali ia dipanggil, sehingga jalur pemulihan yang
 sudah dikenal pemilik sekaligus menghidupkan penjaganya. Batasan tetap
 jujur: Shizuku tidak bisa dihidupkan skrip — penjaga hanya membuat
 kematiannya terdeteksi ±1 menit dan server residen tidak ikut mati lama.
+
+**Fase 14 — penomoran versi & gambaran konfigurasi: SELESAI (8 Okt siang).**
+Bukan fase uji perangkat — pekerjaan dokumentasi atas perintah pemilik,
+dicatat di sini agar riwayat pengujian tetap satu pintu. (1) **Skema
+versi** V\<Mayor\>.\<Minor\> diterapkan surut atas riwayat git:
+V1.0 = fondasi kendali (jangkar `ded1950`), V2.0 = residen & makro
+(jangkar `37b168d`), V3.0 = operasional (commit fase ini); ketiganya
+diberi tag git `v1.0`/`v2.0`/`v3.0` agar isi persis tiap versi bisa
+dibuka kembali. Aturan naik versi ditulis di
+`14-versi-dan-konfigurasi/VERSI.md` — hanya kemampuan teruji perangkat
+yang boleh menaikkan versi. (2) **Gambaran konfigurasi produksi**
+(`KONFIGURASI-HP.md`): peta alur tiga kaki, tata letak berkas HP, contoh
+SSH tersanitasi, urutan pemulihan — tanpa satu pun nilai rahasia. Salinan
+`mulai-server.sh` di `01-server-residen/` disinkronkan dengan versi HP;
+selisihnya tepat blok kait penjaga kaki (advance/13) yang ditambahkan
+pagi ini. (3) **Seni ASCII README utama diganti** meme *ABSOLUTE CINEMA*
+(dua tangan terangkat + kacamata) atas arahan pemilik, lengkap dengan
+badge versi V3.0.

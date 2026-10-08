@@ -105,6 +105,17 @@ Semua 10 peningkatan di `advance/` diuji di perangkat nyata. Ringkasnya:
   palsu (probe ganda) setelah siklus pertama penjaga sempat menembak
   satu notifikasi palsu akibat timeout binder sesaat. PENGUJIAN.md
   Fase 12–13.
+- **Penomoran versi + gambaran konfigurasi (perintah pemilik)**: skema
+  V\<Mayor\>.\<Minor\> diterapkan surut — V1.0 fondasi (jangkar
+  `ded1950`), V2.0 makro residen (`37b168d`), V3.0 operasional — dengan
+  tag git `v1.0`/`v2.0`/`v3.0`. Folder baru
+  `advance/14-versi-dan-konfigurasi/`: `VERSI.md` (skema, riwayat,
+  checklist rilis, catatan penamaan vs DESAIN-V3) + `KONFIGURASI-HP.md`
+  (konfigurasi produksi tersanitasi sebagai gambaran workflow: peta
+  alur, tata letak HP, SSH ControlMaster, urutan pemulihan).
+  `mulai-server.sh` di advance/01 disinkronkan dengan versi HP (kait
+  penjaga). Seni ASCII README utama diganti meme ABSOLUTE CINEMA (dua
+  tangan terangkat) + badge versi V3.0. PENGUJIAN.md Fase 14.
 
 ---
 

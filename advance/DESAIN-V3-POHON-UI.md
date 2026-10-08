@@ -4,6 +4,11 @@
 > bahan lompatan besar berikutnya (roadmap `LOG-PEMBAHARUAN.md` §8 butir 4).
 > Status: menunggu keputusan Travis (syarat aktivasi satu kali oleh
 > pemilik HP ada di §5).
+>
+> Catatan penamaan (8 Okt 2026): "V3" pada judul ini adalah nomor
+> generasi *desain eksekutor*, bukan versi rilis proyek. Versi proyek
+> diatur di `14-versi-dan-konfigurasi/VERSI.md` (saat ini V3.0); bila
+> desain ini dibangun & teruji, ia terbit sebagai **V4.0**.
 
 ## 1. Masalah yang diserang
 
