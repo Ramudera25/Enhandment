@@ -46,3 +46,12 @@ Aplikasi pendamping membuat muse-droid punya **rumah sendiri** di HP:
   (didokumentasikan saat build pertama).
 - Layanan latar tetap bisa dibunuh OEM; perlu strategi hidup-lagi (alarm /
   foreground service dengan notifikasi tetap).
+
+## APK jadi (prebuilt)
+
+`muse-droid-pendamping.apk` di folder ini adalah APK hasil build yang sama
+dengan yang terpasang & teruji di perangkat (713.125 byte, build final
+8 Okt 2026 — UserService tersambung: PING 3 ms, UID 2000, DUMP asli).
+Pasang/upgrade di HP lewat rish: `pm install -r muse-droid-pendamping.apk`
+(penginstal bawaan Android menolak APK build sendiri). Sumbernya lengkap
+di folder ini; bangun ulang dengan `build.sh`.
