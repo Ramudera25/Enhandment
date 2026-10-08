@@ -1,16 +1,5 @@
 # AI-Handle-it
 
-```
- ███  █████       █   █  ███  █   █ ████  █     █████       █████ █████
-█   █   █         █   █ █   █ ██  █ █   █ █     █             █     █
-█████   █    ███  █████ █████ █ █ █ █   █ █     ████   ███    █     █
-█   █   █         █   █ █   █ █  ██ █   █ █     █             █     █
-█   █ █████       █   █ █   █ █   █ ████  █████ █████       █████   █
-        HP Android bekerja sendiri — dikendalikan AI, tanpa root.
-```
-
-*(Proyek ini sebelumnya bernama muse-droid — repo, riwayat, dan isinya sama; yang ganti cuma nama panggilan.)*
-
 ![status](https://img.shields.io/badge/status-terverifikasi%20di%20perangkat%20nyata-brightgreen)
 ![root](https://img.shields.io/badge/root-tidak%20perlu-blue)
 ![bahasa](https://img.shields.io/badge/bahasa-Indonesia-orange)
