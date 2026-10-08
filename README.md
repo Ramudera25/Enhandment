@@ -1,4 +1,23 @@
-# AI-Handle-it
+# Enhandment
+
+```
+        ██
+     ██ ██ ██
+     ██ ██ ██ ██
+     ██ ██ ██ ██
+     ██ ██ ██ ██
+     ███████████
+  █  ███████████
+  ██ ███████████
+   █████████████
+    ████████████
+    ████████████
+    ████████████
+     ██████████
+      ████████
+```
+
+*Tangan AI-nya yang bekerja — HP-nya tetap di tangan kamu.*
 
 ![status](https://img.shields.io/badge/status-terverifikasi%20di%20perangkat%20nyata-brightgreen)
 ![root](https://img.shields.io/badge/root-tidak%20perlu-blue)
