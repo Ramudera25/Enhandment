@@ -69,6 +69,28 @@ Semua 10 peningkatan di `advance/` diuji di perangkat nyata. Ringkasnya:
   (skrining dijawab apa adanya dari CV — kemampuan yang tidak ada di CV
   tidak diklaim).
 
+### 8 Okt 2026 siang — paket roadmap 1+2 dieksekusi (advance/11)
+- **Runner makro residen `misi-cepat.py`**: SATU proses Python persisten
+  per misi (koneksi HTTP keep-alive ke server u2), kueri terarah di dalam
+  proses (dump tidak keluar), polling TUNGGU 250 ms, tunggu-perubahan-
+  hierarki menggantikan sleep datar, gerbang masuk tidak lagi wajib rish,
+  setiap langkah tercatat durasinya.
+- **Benchmark misi standar 9 langkah** (navigasi Wi-Fi + TEMPEL di
+  formulir berkeyboard, sesi yang sama): eksekutor lama **47,8 dtk** →
+  runner baru **22,3 / 22,4 dtk** (dua putaran) — **2,1× lebih cepat**.
+  TEMPEL: 23,0 → 11,7 dtk (sisanya lantai dump halaman berat — tuasnya
+  roadmap butir 3/4). TOMBOL back: ±3,5 → 0,5–1,1 dtk; KETUK_TEKS:
+  ±3 → 0,7 dtk; TUNGGU_TEKS: → 0,33 dtk.
+- **Temuan samping**: polling TUNGGU eksekutor lama ternyata selalu 8 dtk
+  — variabel `DUMP_VIA` yang diset di dalam `dump_xml` tidak pernah
+  keluar dari subshell pipeline Bash, jadi jalur 1 dtk tidak pernah
+  aktif. Tercatat di PENGUJIAN.md Fase 11.
+- **Desain butir 4 ditulis**: `DESAIN-V3-POHON-UI.md` (arsitektur pohon
+  tersimpan + aturan kebenaran anti-basi + rencana uji + target angka).
+- Sesi ini juga membuktikan rantai pemulihan: ketiga kaki kendali mati
+  bersamaan (pola 08.41 berulang) → Shizuku di-Start pemilik → server
+  residen dihidupkan ulang lewat rish → papan hijau lagi.
+
 ---
 
 ## 2. Arsitektur & alur

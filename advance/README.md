@@ -24,6 +24,7 @@ muse-droid, dan **belum semuanya diuji di perangkat**. Aturannya sederhana:
 | 08 | Basis pengetahuan per aplikasi | `08-pengetahuan/` | Berkas catatan | Terisi dari pengalaman; dibaca sebelum misi |
 | 09 | Perencana + dry-run | `09-perencana.py` | Alat Python | **Teruji ✓ 8 Okt** — rantai penuh susun→uji (negatif tertangkap)→jalan→simpan→pakai→jalan. PENGUJIAN.md Fase 6 |
 | 10 | Aplikasi pendamping Shizuku (Jalan 2) | `10-aplikasi-pendamping/` | Kotlin + AIDL + `build.sh` | **TUNTAS 8 Okt** — terdaftar & terotorisasi di Shizuku (kunci: deklarasi API_V23), status "Siap", popup izin otomatis, **UserService tersambung: UID 2000, DUMP XML asli, KETUK/TOMBOL nyata** via socket 127.0.0.1:19101. PENGUJIAN.md Fase 9 + sesi percepatan |
+| 11 | Runner makro residen + kueri terarah | `11-makro-residen/` | Python (persisten, keep-alive) | **TERUJI 8 Okt** — roadmap jurnal butir 1+2 diterapkan: misi standar 9 langkah **47,8 → 22,3 dtk (2,1×)**; desain butir 4 (pohon UI tersimpan) di `DESAIN-V3-POHON-UI.md`. PENGUJIAN.md Fase 11 |
 
 ## Kenapa tidak langsung jadi v2?
 

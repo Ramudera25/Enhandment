@@ -268,3 +268,29 @@ perangkat menyebut optimasi baterai; perbaikan sisi pengguna: bebaskan
 Termux + Shizuku dari optimasi baterai. Justru di kondisi itu rantai
 baru membuktikan nilainya: server residen + aplikasi pendamping tetap
 bekerja tanpa rish.
+
+---
+
+**Fase 11 — 11 runner makro residen + kueri terarah: LULUS (8 Okt siang).**
+Runner baru `misi-cepat.py` (advance/11): satu proses Python persisten
+dengan koneksi keep-alive ke server u2; kueri terarah di dalam proses;
+polling TUNGGU 250 ms; tunggu-perubahan-hierarki (≤1,2 dtk) menggantikan
+sleep datar 1 dtk; gerbang masuk server-first (rish tidak lagi wajib);
+penjaga TARGET utuh; durasi per langkah tercatat di log. Misi standar
+9 langkah (TARGET settings → BUKA Wi-Fi → TUNGGU/KETUK "Add network" →
+TUNGGU/CEK "Network name" → TEMPEL "MUSEUJI" → CEK → back ×2), sesi dan
+perangkat yang sama: **eksekutor lama 47,8 dtk (1 putaran) → runner baru
+22,3 & 22,4 dtk (2 putaran) = 2,1× lebih cepat, semua langkah OK.**
+Rincian sesudah: BUKA 5,3 dtk (latensi start aktivitas + dump pertama),
+TUNGGU_TEKS 0,33 dtk, KETUK_TEKS 0,69 dtk, CEK_TEKS ±0,65 dtk, TEMPEL
+11,7 dtk (dari 23,0 — sisa didominasi dump berulang halaman berkeyboard,
+lantai UiAutomation; tuas lanjutannya roadmap butir 3/4), TOMBOL back
+0,5–1,1 dtk (dari ±3,5). **Temuan samping penting:** polling TUNGGU
+eksekutor lama nyatanya selalu 8 dtk — `DUMP_VIA` diset di dalam fungsi
+`dump_xml` yang selalu dipanggil lewat pipeline/command substitution
+(subshell Bash), sehingga nilainya tidak pernah sampai ke shell utama
+dan jalur polling 1 dtk tidak pernah aktif. Bug diam-diam ini ikut
+menjelaskan lambatnya misi lama di langkah TUNGGU. Sesi diawali ketiga
+kaki kendali mati bersamaan; pemulihan: Shizuku Start oleh pemilik →
+rish hidup → server residen start ulang (mulai-server.sh, hidup pada
+percobaan cek pertama) → seluruh papan hijau sebelum benchmark.

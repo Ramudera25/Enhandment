@@ -1,0 +1,13 @@
+# Misi uji standar untuk benchmark sebelum/sesudah (aman: hanya navigasi
+# Pengaturan Wi-Fi; teks uji ditempel di formulir Add network lalu formulir
+# dibuang dengan tombol back — pola uji TEMPEL 8 Okt; tidak mengubah data).
+TARGET com.android.settings
+BUKA android.settings.WIFI_SETTINGS
+TUNGGU_TEKS "Add network" 20
+KETUK_TEKS "Add network"
+TUNGGU_TEKS "Network name" 20
+CEK_TEKS "Network name"
+TEMPEL "MUSEUJI"
+CEK_TEKS "MUSEUJI"
+TOMBOL back
+TOMBOL back
