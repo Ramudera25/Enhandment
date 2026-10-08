@@ -13,7 +13,7 @@ print(len(x))'
 echo "== cek-siap muse-droid =="
 printf "1) SSH ke Termux (mux) : "; $SSH 'echo tersambung' 2>/dev/null || echo "GAGAL"
 printf "2) Shizuku/rish        : "; $SSH 'export RISH_APPLICATION_ID=com.termux; ./rish -c id 2>/dev/null' 2>/dev/null | grep -o 'uid=[0-9]*' || echo "GAGAL"
-printf "3) Server residen u2   : "; baris3="$($SSH 'export RISH_APPLICATION_ID=com.termux; ./rish -c "ps -A -o PID,PPID,ETIME,NAME" 2>/dev/null' 2>/dev/null | awk '$2==1 && $4=="app_process" {print $3; exit}')"; [ -n "$baris3" ] && echo "hidup, umur $baris3" || echo "tidak terbaca via rish"
+printf "3) Server residen u2   : "; baris3="$($SSH 'export RISH_APPLICATION_ID=com.termux; ./rish -c "ps -A -o PID,PPID,ETIME,NAME" 2>/dev/null' 2>/dev/null | tr -d '\r' | awk '$2==1 && $4=="app_process" {print $3; exit}')"; [ -n "$baris3" ] && echo "hidup, umur $baris3" || echo "hidup (umur tak terbaca)"
 printf "   dump lewat server   : "; n="$($SSH "python3 -c '$PYCEK'" 2>/dev/null)"; [ -n "$n" ] && echo "$n byte OK" || echo "GAGAL"
 printf "4) Pendamping PING/UID : "; $SSH 'python3 -c "
 import socket
