@@ -117,6 +117,43 @@ Semua 10 peningkatan di `advance/` diuji di perangkat nyata. Ringkasnya:
   penjaga). Seni ASCII README utama diganti meme ABSOLUTE CINEMA (dua
   tangan terangkat) + badge versi V3.0. PENGUJIAN.md Fase 14.
 
+### 8 Okt 2026 sore — V4.0 teruji di perangkat nyata (advance/15–17)
+- **Pohon UI aksesibilitas aktif.** Layanan “muse-droid Pohon UI”
+  akhirnya terikat oleh sistem sesudah reboot HP. Diagnosis sebelumnya
+  terbukti: manajer aksesibilitas (AMS) macet secara global — uji
+  kontrol AutoX.js pun gagal terikat — dan reboot menyembuhkannya.
+  Socket pohon 127.0.0.1:19102 menjawab `PING` dalam **7–32 ms**;
+  umur salinan saat layar aktif **32 ms–0,4 dtk**. `CARI` terverifikasi
+  akurat terhadap tangkapan layar untuk simpul yang terlihat (tombol
+  “Invite” Brave: bounds `[804,100][1049,205]`, tengah (926,152)).
+  Batas jujurnya dicatat apa adanya: bounds simpul di bawah lipatan
+  daftar bisa tidak andal, sehingga verifikasi pasca-ketuk §4 tetap
+  menjadi bagian dari protokol.
+- **Temuan arsitektur besar: pohon & u2 eksklusif.** Sesi UiAutomation
+  dari server u2 menutup layanan aksesibilitas selama aktif; sesudah
+  u2 berhenti, pohon mengikat kembali sendiri dalam **±12 dtk**.
+  Konsekuensinya permanen untuk workflow: **pohon adalah kaki utama,
+  u2 adalah cadangan on-demand** — bukan dua mata yang dinyalakan
+  bersamaan.
+- **Penjaga menjadi penjaga empat kaki (Fase 16).** `penjaga-kaki.sh`
+  kini memantau pohon 19102, u2, rish, dan pendamping 19101; menahan
+  kebangkitan u2 selama pohon hidup; dan menegakkan eksklusivitas
+  dengan mematikan u2 bila pohon mati tetapi u2 hidup (maks 1× per
+  5 menit per episode). Lingkar sembuh-sendiri terlihat langsung di
+  log: **18:24:25** deteksi → **18:24:51** u2 dimatikan →
+  **18:26:01** pohon pulih → **18:26:02** u2 ditahan. Layanan depan
+  pendamping dihidupkan penjaga via rish dan 19101 menjawab **PONG**
+  secara stabil.
+- **Misi ad-hoc generik terbukti (Fase 17).** Misi
+  `uji-adhoc-settings.job` di Pengaturan Android **LULUS 8/8** dalam
+  **24,62 dtk** pada mode pohon: buka aplikasi → tunggu teks → ketuk
+  ikon cari → `ISI_TEKS "bluetooth"` → tunggu/cek “Bluetooth” → foto.
+  `TUNGGU_TEKS` hanya **8 ms** dan `CEK_TEKS` **7 ms**. Catatan jujur:
+  `ISI_TEKS` via pohon sempat kalah balapan dengan tangkapan fokus
+  snapshot dan jatuh ke `input text` rish yang terverifikasi; poles
+  V4.1 adalah menunggu versi snapshot naik/fokus muncul maks 600 ms
+  sebelum fallback.
+
 ---
 
 ## 2. Arsitektur & alur
@@ -212,6 +249,16 @@ Dua catatan ketahanan yang belum tertutup saat jurnal ini ditulis:
   kaki yang hanya bisa dihidupkan manusia dari aplikasinya. Tiga kaki
   kendali yang saling cadangan adalah mitigasi arsitekturalnya.
 
+**Pembaruan catatan 8 Okt 2026 sore (V4.0):** butir *foreground
+service* di atas sudah dikerjakan dan teruji pada Fase 16 — layanan
+depan pendamping dihidupkan penjaga via rish dan socket 19101 menjawab
+PONG stabil selama uji. Catatan baru yang menggantikan sebagian cara
+pandang lama adalah **eksklusivitas pohon–u2**: sesi UiAutomation
+menutup layanan aksesibilitas selama aktif, sedangkan pohon mengikat
+kembali sendiri ±12 dtk sesudah u2 berhenti. Karena itu susunan kaki
+sekarang dibaca sebagai pohon utama + u2 cadangan on-demand, dengan
+rish dan pendamping sebagai jalur pendukung/pemulihan.
+
 ---
 
 ## 6. Angka benchmark (semua terukur di perangkat)
@@ -280,6 +327,12 @@ memperbarui statusnya di file ini.
    ke puluhan milidetik dan siklus total berpotensi ±0,2 dtk. Syarat:
    pemilik HP mengaktifkan layanan itu sekali di Pengaturan; ini satu-
    satunya jalan menembus lantai UiAutomator.
+   **STATUS 8 Okt 2026 sore: DITERAPKAN & TERUJI sebagai V4.0**
+   (`advance/15`, PENGUJIAN.md Fase 15) — layanan terikat sesudah
+   reboot menyembuhkan AMS yang macet global; PING 7–32 ms; umur
+   salinan 32 ms–0,4 dtk saat layar aktif; CARI akurat untuk simpul
+   terlihat. Aturan arsitektur hasil ujinya: pohon dan u2 eksklusif,
+   jadi pohon adalah kaki utama dan u2 hanya cadangan on-demand.
 5. **Ketahanan** — pendamping menjadi *foreground service*; penjaga yang
    lebih proaktif untuk server residen; pemulihan berjenjang yang jujur
    saat kaki kendali mati (yang bisa dipulihkan mesin dipulihkan, yang
@@ -287,8 +340,13 @@ memperbarui statusnya di file ini.
    **STATUS 8 Okt siang: SEBAGIAN DITERAPKAN** — penjaga residen
    `advance/13` terpasang & teruji (server residen dipulihkan otomatis
    ±91 dtk; kematian Shizuku diberitahukan ±1 menit dengan probe ganda
-   anti-alarm-palsu). Sisa butir ini: *foreground service* untuk aplikasi
-   pendamping — belum dibangun.
+   anti-alarm-palsu).
+   **STATUS 8 Okt 2026 sore: DIPERBARUI (Fase 16)** — *foreground
+   service* pendamping sudah menjadi bagian paket V4.0: penjaga
+   menghidupkannya via rish dan socket 19101 menjawab PONG stabil.
+   Penjaga juga naik kelas menjadi penjaga empat kaki (pohon, u2, rish,
+   pendamping) yang menahan kebangkitan u2 selama pohon hidup dan
+   menegakkan eksklusivitas pohon–u2 bila keadaan terbalik.
 
 ---
 

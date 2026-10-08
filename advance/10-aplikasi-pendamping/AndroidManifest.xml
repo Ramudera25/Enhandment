@@ -13,6 +13,12 @@
          tidak muncul di list, binder tidak pernah dikirim, popup izin
          tidak bisa muncul (akar masalah terbukti 8 Okt 2026). -->
     <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
+    <!-- Layanan depan (V4.0): jangkar hidup proses agar pendamping tidak
+         dibunuh Android saat menganggur. SPECIAL_USE = tipe FGS API 34;
+         POST_NOTIFICATIONS agar notifikasi tetapnya tampil normal. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application android:label="muse-droid Pendamping"
         android:theme="@android:style/Theme.Material.Light">
@@ -26,6 +32,25 @@
              aplikasi Shizuku (manajer memindai penanda ini + provider). -->
         <meta-data android:name="moe.shizuku.client.V3_SUPPORT" android:value="true" />
         <service android:name=".LayananLokal" android:exported="false" />
+        <!-- Jangkar hidup: foreground service dengan notifikasi tetap;
+             menyalakan LayananLokal sekalian. -->
+        <service android:name=".LayananDepan" android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Menjaga layanan kendali lokal perangkat tetap siaga untuk misi pemilik HP" />
+        </service>
+        <!-- Layanan aksesibilitas pohon UI (V4.0). Dikonfigurasi
+             programatik di onServiceConnected (tanpa berkas xml meta-data).
+             Wajib diaktifkan manual sekali oleh pemilik HP di Pengaturan. -->
+        <service android:name=".LayananAkses" android:exported="true"
+            android:label="muse-droid Pohon UI"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data android:name="android.accessibilityservice"
+                android:resource="@xml/layanan_akses" />
+        </service>
         <provider android:name="rikka.shizuku.ShizukuProvider"
             android:authorities="id.musedroid.pendamping.shizuku"
             android:exported="true" android:multiprocess="false"

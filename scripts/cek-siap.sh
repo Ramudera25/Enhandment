@@ -21,3 +21,7 @@ def k(p):
     s=socket.create_connection((\"127.0.0.1\",19101),timeout=6); s.sendall((p+\"\\n\").encode()); d=s.recv(256).decode().strip(); s.close(); return d
 print(k(\"PING\"), \"/\", k(\"UID\"))" 2>/dev/null' 2>/dev/null || echo "GAGAL (layanan belum dinyalakan?)"
 printf "5) Eksekutor           : "; $SSH 'test -x ~/eksekutor.sh -o -f ~/eksekutor.sh && echo siap' 2>/dev/null || echo "GAGAL"
+printf "6) Pohon UI 19102      : "; $SSH 'python3 -c "
+import socket,json
+s=socket.create_connection((\"127.0.0.1\",19102),timeout=6); s.sendall(b\"PING\n\"); d=s.recv(512).decode().strip(); s.close()
+r=json.loads(d); print(\"PONG versi\", r.get(\"versi\"), \"umur\", r.get(\"umur_ms\"), \"ms\")" 2>/dev/null' 2>/dev/null || echo "GAGAL (aksesibilitas belum terikat?)"

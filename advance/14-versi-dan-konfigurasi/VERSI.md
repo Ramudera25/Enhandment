@@ -4,7 +4,7 @@
 > Setiap kali kemampuannya naik kelas **dan sudah terbukti jalan di HP
 > beneran**, versinya naik: V1 → V2 → V3, dan seterusnya. Pembaca bisa tahu
 > sekilas: versi berapa yang sedang dibicarakan, isinya apa, buktinya di
-> mana. Versi saat ini: **V3.0**.
+> mana. Versi saat ini: **V4.0**.
 
 ## Skema penomoran
 
@@ -33,16 +33,15 @@ Format: **V\<Mayor\>.\<Minor\>** — tag git-nya `v<Mayor>.<Minor>`
 | **V1.0** | 7 Okt 2026 | **Fondasi kendali.** Shizuku/rish memberi shell uid=2000 tanpa root; eksekutor lokal "Jalan 0" + bahasa misi `.job`; dump UI sebagai mata; protokol dua mata & grid (docs/09–10). Misi demo 6 langkah BERES langsung di HP. | commit `ded1950`, tag `v1.0` | Fase 0–7, docs/09–10 |
 | **V2.0** | 8 Okt 2026 | **Residen & cepat.** Server residen uiautomator2 di dalam HP (`01`), aplikasi pendamping Shizuku tersambung penuh (`10`), eksekutor generasi baru + runner makro persisten `misi-cepat` (`11`): siklus lihat→ketuk→lihat di perangkat 0,8–1,0 dtk; misi standar 9 langkah 47,8 → 22,3 dtk (2,1×). | commit `37b168d`, tag `v2.0` | Fase 8, 9, 11 |
 | **V3.0** | 8 Okt 2026 | **Operasional nyata.** Misi navigasi Glints untuk pekerjaan produksi (`12`: deep link + pencarian, misi pencarian 8 langkah 12,6 dtk), penjaga kaki residen (`13`: server mati dipulihkan ±91 dtk, kematian Shizuku diberitahukan ±1 menit), playbook batch lamaran memakai misi + deep link + observasi dump-first, aturan URL detail wajib di antrean HP. | commit dokumentasi versi ini, tag `v3.0` | Fase 12, 13 |
+| **V4.0** | 8 Okt 2026 | **Pohon UI aktif & misi generik.** Layanan aksesibilitas “muse-droid Pohon UI” (`15`) terikat di perangkat dan menyajikan salinan pohon live lewat socket 19102 (PING 7–32 ms; umur salinan 32 ms–0,4 dtk saat layar aktif). Penjaga naik menjadi **penjaga empat kaki** (`13`, diperbarui di Fase 16): memantau pohon, u2, rish, dan pendamping 19101; menahan kebangkitan u2 selama pohon hidup; serta menegakkan eksklusivitas pohon–u2 karena sesi UiAutomation menutup layanan aksesibilitas selama aktif. Layanan depan pendamping dihidupkan penjaga via rish (19101 PONG stabil). Playbook **misi ad-hoc generik** (`16`) teruji di Pengaturan Android: 8/8 langkah, 24,62 dtk, mode pohon. | dokumentasi rilis ini | Fase 15, 16, 17 |
 
 ## Calon versi berikutnya (belum terbit — menunggu bukti)
 
-- **V4.0 (calon):** pohon UI tersimpan lewat layanan aksesibilitas —
-  observasi turun ke puluhan milidetik. Desain:
-  `../DESAIN-V3-POHON-UI.md`. Syarat: pemilik mengaktifkan layanan
-  aksesibilitas sekali di Pengaturan HP + pembangunan + uji terukur.
-- **V3.x (calon):** isi teks langsung (set-text) untuk memangkas sisa
-  waktu TEMPEL; aplikasi pendamping menjadi *foreground service* agar
-  tidak mati saat lama menganggur.
+- **V4.1 (calon):** poles `ISI_TEKS` lewat pohon — tunggu versi
+  snapshot naik dan/atau fokus kolom muncul maks 600 ms sebelum
+  memutuskan fallback, menutup catatan balapan fokus pada Fase 17.
+- **V4.x (calon):** isi teks langsung (set-text) yang lebih andal untuk
+  memangkas sisa waktu TEMPEL pada lebih banyak aplikasi.
 
 ## Catatan penamaan (jangan tertukar)
 

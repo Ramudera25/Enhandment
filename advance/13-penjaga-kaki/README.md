@@ -20,6 +20,24 @@ menumbangkan UiAutomation — penjaga tidak pernah memanggil dump):
 | rish/Shizuku | `rish -c id` ∋ uid=2000 | Mati → notifikasi Termux prioritas tinggi SEKALI per episode (Shizuku hanya bisa dihidupkan pemilik dari aplikasinya). Pulih → dicatat di log |
 | Aplikasi pendamping | TCP 127.0.0.1:19101 | Dicatat perubahan statusnya saja — menghidupkan kaki ini membuka aplikasi di layar, mengganggu pemilik |
 
+## Kebijakan V4.0 — pohon utama, u2 cadangan on-demand (teruji Fase 16)
+
+Sejak pohon UI aksesibilitas aktif, penjaga memantau **empat kaki**:
+pohon 19102, server u2, rish/Shizuku, dan pendamping 19101. Aturan
+barunya lahir dari temuan Fase 15 bahwa sesi UiAutomation menutup
+layanan aksesibilitas selama aktif — pohon dan u2 **eksklusif**:
+
+- **Pohon hidup → u2 ditahan.** Penjaga tidak menghidupkan ulang u2
+  selama pohon 19102 menjawab, agar kaki utama tidak tertutup oleh
+  sesi UiAutomation.
+- **Pohon mati + u2 hidup → tegakkan.** Penjaga mematikan u2 agar
+  pohon dapat mengikat kembali, dibatasi maks **1× per 5 menit per
+  episode**. Pada uji perangkat, sesudah u2 dimatikan pohon pulih
+  sendiri dan penjaga kemudian menahan u2 tetap mati.
+- **Pendamping lewat layanan depan.** Bila socket 19101 mati dan rish
+  hidup, penjaga menghidupkan layanan depan pendamping via rish; pada
+  uji Fase 16 socket 19101 menjawab **PONG** secara stabil.
+
 Keadaan di `~/.penjaga-kaki/status`, log di `~/.penjaga-kaki/penjaga.log`
 (rotasi 200 KB). Satu instans saja (pidfile).
 

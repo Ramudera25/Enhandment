@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Konfigurasi layanan aksesibilitas pohon UI (V4.0).
+     Meta-data ini WAJIB ada: tanpa dia PackageManager tidak mengenali
+     layanan sebagai AccessibilityService (terbukti di perangkat
+     8 Okt 2026 — layanan Enabled tapi tidak pernah diikat sistem).
+     Isinya mencerminkan konfigurasi programatik di LayananAkses.kt;
+     XML adalah sumber otoritatif untuk kemampuan (terutama
+     canRetrieveWindowContent). -->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/deskripsi_akses"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeViewFocused|typeViewTextChanged|typeViewClicked|typeViewScrolled"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows|flagIncludeNotImportantViews"
+    android:canPerformGestures="false"
+    android:canRetrieveWindowContent="true"
+    android:notificationTimeout="40" />

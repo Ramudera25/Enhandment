@@ -1,0 +1,58 @@
+# =====================================================================
+# TEMPLATE MISI AD-HOC GENERIK (advance/16) — untuk aplikasi sembarang.
+#
+# Cara pakai:
+#   1. Salin berkas ini, ganti nama sesuai tugas (mis. misi-<tugas>.job).
+#   2. Ganti com.contoh.aplikasi dengan paket aplikasi target (kedua
+#      tempat: TARGET dan BUKA_APLIKASI harus sama).
+#   3. Isi langkah dari hasil REKOGNISI (dump/screenshot segar): pakai
+#      teks jangkar yang UNIK di layarnya. Jangan menebak teks/geometri.
+#   4. Jalankan:  python3 misi-ad-hoc.py <berkas.job>
+#      Baca lognya: mode observasi (pohon/dump/jembatan) + durasi langkah.
+#
+# ATURAN MAIN (playbook lengkap: README.md folder ini):
+#   - Misi berhenti SEBELUM langkah destruktif (KIRIM/HAPUS/bayar) —
+#     keputusan langkah itu milik agen dari dump segar/screenshot,
+#     TIDAK PERNAH dari salinan pohon.
+#   - Formulir yang tata letaknya BERGESER sesudah tiap jawaban:
+#     SATU ketukan per .job, verifikasi dulu, baru susun .job berikutnya.
+#     Jangan rangkai banyak isian dalam satu berkas buta.
+#   - Langkah buta (KETUK/GESER/TOMBOL koordinat) dijaga TARGET: batal
+#     jujur bila paket depan bukan aplikasi target.
+# =====================================================================
+
+# Paket aplikasi yang boleh disentuh misi ini (penjaga keselamatan).
+TARGET com.contoh.aplikasi
+
+# Buka aplikasi dari nama paket (activity dicari runner sendiri).
+BUKA_APLIKASI com.contoh.aplikasi
+
+# Tunggu jangkar halaman awal (teks yang pasti ada & unik di beranda).
+TUNGGU_TEKS "Beranda" 20
+
+# --- Contoh langkah (aktifkan & sesuaikan; hapus yang tidak perlu) ---
+# Ketuk menu berdasarkan teksnya:
+#KETUK_TEKS "Menu"
+#TUNGGU_TEKS "Judul Halaman Tujuan" 15
+#
+# Isi kolom (fokus lewat ketuk, lalu set-text node hidup; cadangan KETIK):
+#ISI_TEKS "kata kunci pencarian"
+#TUNGGU_TEKS "Hasil" 15
+#
+# Ketuk teks hasil yang dituju:
+#KETUK_TEKS "Nama Item"
+#
+# Gulir (x1 y1 x2 y2 [durasi ms]):
+#GESER 540 1700 540 800 300
+#
+# Ketuk koordinat buta — HANYA bila geometrinya sudah terbukti dari
+# rekognisi segar; dijaga TARGET:
+#KETUK 540 1200
+#
+# Tombol sistem / jeda / foto bukti:
+#TOMBOL back
+#JEDA 1
+#FOTO bukti-adhoc.png
+
+# Penutup wajib: pastikan misi berakhir di keadaan yang dimaksud.
+CEK_TEKS "Beranda"

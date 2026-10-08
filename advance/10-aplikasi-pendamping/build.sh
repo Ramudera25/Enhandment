@@ -21,8 +21,14 @@ STDLIB=kotlinc/lib/kotlin-stdlib.jar
 rm -rf out && mkdir -p out/classes out/dex out/aidl-java src
 cp ~/workspace/muse-droid/advance/10-aplikasi-pendamping/MainActivity.kt \
    ~/workspace/muse-droid/advance/10-aplikasi-pendamping/LayananLokal.kt \
-   ~/workspace/muse-droid/advance/10-aplikasi-pendamping/LayananPriv.kt src/
+   ~/workspace/muse-droid/advance/10-aplikasi-pendamping/LayananPriv.kt \
+   ~/workspace/muse-droid/advance/10-aplikasi-pendamping/LayananAkses.kt \
+   ~/workspace/muse-droid/advance/10-aplikasi-pendamping/LayananDepan.kt src/
 cp ~/workspace/muse-droid/advance/10-aplikasi-pendamping/ILayananPriv.aidl src/
+# Manifest: repo adalah sumber tunggal (V4.0) — salin agar build tak pernah basi.
+cp ~/workspace/muse-droid/advance/10-aplikasi-pendamping/AndroidManifest.xml AndroidManifest.xml
+# Sumber daya (konfigurasi aksesibilitas @xml/layanan_akses + strings) dari repo.
+rm -rf res && cp -r ~/workspace/muse-droid/advance/10-aplikasi-pendamping/res res
 mkdir -p src/id/musedroid/pendamping
 mv src/ILayananPriv.aidl src/id/musedroid/pendamping/ILayananPriv.aidl
 
@@ -41,9 +47,13 @@ echo "== d8 =="
 "$BT/d8" --lib "$AJAR" --output out/dex \
   $(find out/classes -name '*.class') "$STDLIB" "$API" "$PROV" "$AIDL"
 
+echo "== aapt2 compile res =="
+"$BT/aapt2" compile --dir res -o out/res.zip
+
 echo "== aapt2 link =="
 "$BT/aapt2" link -o out/app-unsigned.apk -I "$AJAR" \
-  --manifest AndroidManifest.xml --min-sdk-version 24 --target-sdk-version 34
+  --manifest AndroidManifest.xml --min-sdk-version 24 --target-sdk-version 34 \
+  out/res.zip
 
 echo "== masukkan dex + zipalign + tanda tangan =="
 (cd out/dex && zip -q ../app-unsigned.apk classes.dex)

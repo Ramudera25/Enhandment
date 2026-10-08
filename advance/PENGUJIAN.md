@@ -360,3 +360,77 @@ selisihnya tepat blok kait penjaga kaki (advance/13) yang ditambahkan
 pagi ini. (3) **Seni ASCII README utama diganti** meme *ABSOLUTE CINEMA*
 (dua tangan terangkat + kacamata) atas arahan pemilik, lengkap dengan
 badge versi V3.0.
+
+---
+
+**Fase 15 — 15 pohon UI aksesibilitas: LULUS (8 Okt 2026 sore).**
+Tujuan: membuktikan layanan aksesibilitas “muse-droid Pohon UI” pada
+aplikasi pendamping dapat menjadi mata utama misi — memelihara salinan
+pohon jendela aktif dan menjawab kueri lokal lewat socket
+127.0.0.1:19102, tanpa dump UiAutomation di setiap langkah. Hasil
+langkah:
+- **Aktivasi & diagnosis.** Layanan baru terikat oleh sistem **sesudah
+  reboot HP**. Diagnosisnya bukan cacat pada layanan ini: manajer
+  aksesibilitas Android (AMS) terbukti macet secara global — uji kontrol
+  dengan layanan AutoX.js juga gagal terikat — dan reboot menyembuhkan
+  keadaan itu.
+- **Kecepatan & kesegaran.** `PING` ke 19102 terukur **7–32 ms**. Saat
+  layar aktif, umur salinan pohon berada pada **32 ms–0,4 dtk**.
+- **Akurasi untuk simpul terlihat.** `CARI` diverifikasi terhadap
+  tangkapan layar: tombol “Invite” di Brave ditemukan pada bounds
+  `[804,100][1049,205]` dengan titik tengah **(926,152)**.
+- **Batas jujur.** Bounds simpul yang berada di bawah lipatan daftar
+  (off-screen) bisa tidak andal — terlihat pada kasus “Battery” di
+  Pengaturan. Karena itu koordinat dari pohon tidak diperlakukan
+  sebagai kebenaran mutlak untuk semua simpul; verifikasi pasca-ketuk
+  pada aturan kebenaran desain §4 tetap wajib dan menutupi batas ini.
+- **Temuan arsitektur besar.** Selama sesi UiAutomation (server u2)
+  aktif, layanan aksesibilitas tertutup/tidak terikat; sesudah u2
+  berhenti, pohon mengikat kembali sendiri dalam **±12 dtk**. Pohon dan
+  u2 dengan demikian **eksklusif**, bukan tumpukan yang bisa dipakai
+  bersamaan: **pohon adalah kaki utama, u2 adalah cadangan on-demand**.
+
+Putusan: **LULUS.** Pohon UI aksesibilitas aktif di perangkat nyata,
+cukup cepat untuk observasi misi, dan akurat untuk simpul yang terlihat;
+batasan simpul off-screen serta eksklusivitas terhadap u2 dicatat
+sebagai aturan operasi, bukan disembunyikan.
+
+**Fase 16 — layanan depan pendamping + penjaga V4.0: LULUS
+(8 Okt 2026 sore).** Tujuan: membuat pendamping dan kaki observasi
+bertahan sebagai satu sistem yang menegakkan aturan eksklusivitas
+Fase 15. `penjaga-kaki.sh` kini memantau **empat kaki**: pohon 19102,
+server u2, rish/Shizuku, dan pendamping 19101. Kebijakan barunya:
+- Selama pohon hidup, penjaga **menahan kebangkitan u2** agar sesi
+  UiAutomation tidak menutup kaki utama.
+- Bila pohon mati tetapi u2 hidup, penjaga **menegakkan eksklusivitas**
+  dengan mematikan u2 — dibatasi maks **1× per 5 menit per episode**.
+- Layanan depan (FGS) pendamping dihidupkan penjaga lewat rish; socket
+  19101 sesudahnya menjawab **PONG** secara stabil.
+
+Lingkar sembuh-sendiri terbukti langsung dari log penjaga:
+**18:24:25** keadaan bermasalah terdeteksi → **18:24:51** u2 dimatikan
+→ **18:26:01** pohon pulih → **18:26:02** u2 ditahan agar tidak bangkit
+lagi. Putusan: **LULUS.** Penjaga tidak lagi sekadar memulihkan kaki
+satu per satu; ia menjaga pohon sebagai jalur utama dan memakai u2
+hanya bila memang dibutuhkan.
+
+**Fase 17 — 16 misi ad-hoc generik: LULUS (8 Okt 2026 sore).**
+Tujuan: membuktikan runner `misi-ad-hoc.py` dapat mengerjakan tugas
+sekali jalan di aplikasi non-Glints dari satu berkas `.job`, memakai
+mode pohon. Misi `uji-adhoc-settings.job` di Pengaturan Android
+menjalankan `BUKA_APLIKASI` → `TUNGGU_TEKS` → ketuk ikon cari →
+`ISI_TEKS "bluetooth"` → `TUNGGU`/`CEK "Bluetooth"` → `FOTO`.
+Hasilnya **LULUS 8/8 langkah** dengan total **24,62 dtk** dalam mode
+pohon. Angka langkah observasinya berubah kelas: **`TUNGGU_TEKS`
+8 ms** dan **`CEK_TEKS` 7 ms** — sebelumnya langkah setara memakan
+ratusan milidetik lewat dump.
+
+Catatan jujur: `ISI_TEKS` lewat pohon sempat gagal pada misi ini
+karena snapshot belum menangkap fokus kolom — balapan timing — lalu
+misi jatuh ke `input text` via rish yang terverifikasi, sehingga misi
+tetap beres tanpa mengarang keberhasilan jalur pohonnya. Poles yang
+tercatat untuk **V4.1**: `ISI` menunggu versi snapshot naik dan/atau
+fokus kolom muncul maks **600 ms** sebelum memutuskan fallback.
+Putusan: **LULUS dengan catatan di atas** — playbook misi ad-hoc kini
+terbukti di aplikasi non-Glints, dan jalur pengisian teks yang belum
+mulus sudah punya perbaikan terukur berikutnya.

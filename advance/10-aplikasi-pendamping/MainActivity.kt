@@ -1,11 +1,12 @@
-// MainActivity.kt — aplikasi pendamping muse-droid (build pertama, teruji 8 Okt 2026).
+// MainActivity.kt — aplikasi pendamping muse-droid (build pertama teruji
+// 8 Okt 2026; diperluas V4.0: layanan depan + status aksesibilitas).
 // Aktivitas utama:
 //   1) memeriksa Shizuku hidup & izin sudah diberikan,
 //   2) meminta izin — POPUP OTOMATIS: begitu binder Shizuku tiba dan izin
 //      belum ada, dialog izin resmi Shizuku langsung dimunculkan
 //      (requestPermission), tanpa berburu daftar aplikasi di manajer,
-//   3) menyalakan LayananLokal (layanan biasa dari latar-depan; pemakaian
-//      foreground service = penyempurnaan berikutnya — lihat README 10).
+//   3) menyalakan LayananDepan (foreground service) yang menjadi jangkar
+//      hidup proses dan menyalakan LayananLokal (socket 19101) sekalian.
 //
 // Catatan binder: binder Shizuku dikirim server ke provider aplikasi yang
 // dikenalnya (penanda moe.shizuku.client.V3_SUPPORT di manifest). Aplikasi
@@ -17,6 +18,7 @@ package id.musedroid.pendamping
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.widget.Button
 import android.widget.LinearLayout
@@ -52,12 +54,13 @@ class MainActivity : Activity() {
             setOnClickListener { bukaShizuku() }
         })
         induk.addView(Button(this).apply {
-            text = "Nyalakan Layanan Lokal (127.0.0.1:19101)"
+            text = "Nyalakan Layanan (depan + lokal 19101)"
             setOnClickListener { nyalakanLayanan() }
         })
         setContentView(induk)
         Shizuku.addBinderReceivedListenerSticky(saatBinderTiba)
         Shizuku.addRequestPermissionResultListener { _, _ -> segarkanStatus() }
+        mintaIzinNotifikasi()
         segarkanStatus()
         tembakPopupIzin()
     }
@@ -80,11 +83,16 @@ class MainActivity : Activity() {
         binderHidup() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
 
     private fun segarkanStatus() {
-        status.text = when {
+        val dasar = when {
             !binderHidup() -> "Binder Shizuku belum tiba. Ketuk 'Buka Shizuku Sekali', lalu kembali ke sini — popup izin muncul otomatis."
             !izinAda() -> "Shizuku hidup, izin belum diberikan — popup izin ditembakkan."
-            else -> "Siap. Layanan lokal dapat dinyalakan."
+            else -> "Siap. Layanan dapat dinyalakan."
         }
+        val akses = if (LayananAkses.aktif)
+            "\nPohon UI: AKTIF (socket 19102)."
+        else
+            "\nPohon UI: belum aktif — Pengaturan > Aksesibilitas > Aplikasi terpasang > muse-droid Pendamping."
+        status.text = dasar + akses
     }
 
     private fun tembakPopupIzin() {
@@ -101,8 +109,18 @@ class MainActivity : Activity() {
         if (niat != null) startActivity(niat)
     }
 
+    private fun mintaIzinNotifikasi() {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 7)
+        }
+    }
+
     private fun nyalakanLayanan() {
-        startService(Intent(this, LayananLokal::class.java))
-        status.text = "Layanan dinyalakan — uji: kirim baris PING ke 127.0.0.1:19101."
+        val niat = Intent(this, LayananDepan::class.java)
+        if (Build.VERSION.SDK_INT >= 26) startForegroundService(niat)
+        else startService(niat)
+        status.text = "Layanan depan dinyalakan — uji: PING ke 127.0.0.1:19101 & 19102."
     }
 }
