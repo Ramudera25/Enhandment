@@ -172,3 +172,35 @@ Fase 8 (proses app_process biasa) terbukti tetap hidup melewatinya.
 Sisa tindak lanjut tunggal: restart Shizuku oleh Travis →
 verifikasi kaki izin aplikasi pendamping (status + Allow) dalam sekali
 buka. Sesudah itu repo siap push.
+
+**Sesi benahi 8 Okt pagi (atas perintah Travis: "benahi percobaan yang
+masih gagal termasuk uji aplikasi"):** tiga perbaikan, dua terverifikasi
+penuh, satu menunggu ketukan Travis:
+(1) **Fase 7 RENCANA — TERATASI & terverifikasi.** Dengan
+`max_tokens: 4000`, alias `utama` menjawab rencana lengkap
+(finish=stop) dan `cadangan-gemini` juga utuh. Aturan anggaran kini
+tertulis permanen di kepala `04-router-model.py`.
+(2) **TEMPEL eksekutor v2 — kode ditulis, uji perangkat menyusul.**
+Diagnosis kegagalan lama: eksekutor menekan-lama TANPA memastikan kolom
+fokus dan memakai koordinat dump pra-keyboard. v2: ketuk kolom dulu
+(fokus + keyboard naik) → dump SEGAR → tekan-lama 800 ms → menu
+Tempel/Paste → verifikasi kata pertama (mekanisme jujur dipertahankan).
+(3) **Fase 9 — akar "binder tak tiba" dikoreksi & fitur popup dibangun.**
+Koreksi atas catatan sesi sebelumnya: **Sui.init adalah jalur Magisk —
+tidak berlaku di Shizuku non-root ini** (dihapus). Yang benar: manajer/
+server Shizuku memindai aplikasi klien dari **penanda
+`moe.shizuku.client.V3_SUPPORT`** di manifest — belum ada di build lama,
+kini ditambah; dan server hanya membagikan binder **saat ia start**, jadi
+urutan yang benar: pasang build berpenanda DULU, restart server SESUDAH.
+Atas permintaan Travis ("bikin fitur popup agar izinnya lebih gampang"),
+MainActivity kini memasang **listener binder + auto-`requestPermission`**:
+begitu binder tiba dan izin belum ada, dialog izin resmi Shizuku muncul
+sendiri (termasuk saat kembali dari aplikasi Shizuku lewat tombol
+"Buka Shizuku Sekali"). Build terpasang 06.50–06.56 lewat rish; verifikasi
+popup → Allow → status "Siap" menunggu satu restart Shizuku oleh Travis
+(server terakhir start SEBELUM build berpenanda terpasang). Pasang manual
+oleh pengguna gagal di penginstal bawaan (APK build sendiri) — jalur
+`pm install` via rish adalah jalur pasang resmi proyek ini.
+Catatan kerapuhan tambahan: dump lewat jalur lambat bisa terbaca basi
+(memori halaman lama) bila pengguna sedang aktif mengemudi — verifikasi
+layar sensitif waktu sebaiknya lewat dump server residen (0,56 dtk).

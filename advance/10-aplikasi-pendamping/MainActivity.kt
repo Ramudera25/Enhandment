@@ -1,9 +1,17 @@
 // MainActivity.kt — aplikasi pendamping muse-droid (build pertama, teruji 8 Okt 2026).
 // Aktivitas utama:
 //   1) memeriksa Shizuku hidup & izin sudah diberikan,
-//   2) meminta izin bila belum (requestPermission),
+//   2) meminta izin — POPUP OTOMATIS: begitu binder Shizuku tiba dan izin
+//      belum ada, dialog izin resmi Shizuku langsung dimunculkan
+//      (requestPermission), tanpa berburu daftar aplikasi di manajer,
 //   3) menyalakan LayananLokal (layanan biasa dari latar-depan; pemakaian
 //      foreground service = penyempurnaan berikutnya — lihat README 10).
+//
+// Catatan binder: binder Shizuku dikirim server ke provider aplikasi yang
+// dikenalnya (penanda moe.shizuku.client.V3_SUPPORT di manifest). Aplikasi
+// yang dipasang sesudah server start mungkin belum menerimanya; tombol
+// "Buka Shizuku Sekali" memancing pemindaian ulang — sesudah itu listener
+// di bawah menembakkan popup izin sendiri.
 package id.musedroid.pendamping
 
 import android.app.Activity
@@ -14,19 +22,21 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import rikka.shizuku.Shizuku
-import rikka.sui.Sui
 
 class MainActivity : Activity() {
 
     private lateinit var status: TextView
+    private var popupSudahDitembak = false
+
+    private val saatBinderTiba = Shizuku.OnBinderReceivedListener {
+        runOnUiThread {
+            segarkanStatus()
+            tembakPopupIzin()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Sui.init mengambil binder langsung dari aplikasi Shizuku — penting
-        // untuk aplikasi yang DIPASANG SESUDAH server Shizuku start (binder
-        // tidak dikirim ulang ke provider baru sampai server restart;
-        // terbukti di perangkat 8 Okt 2026).
-        try { Sui.init(packageName) } catch (e: Throwable) { /* status akan melaporkan */ }
         val induk = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(48, 64, 48, 48)
@@ -34,37 +44,61 @@ class MainActivity : Activity() {
         status = TextView(this).apply { textSize = 18f }
         induk.addView(status)
         induk.addView(Button(this).apply {
-            text = "Minta Izin Shizuku"
-            setOnClickListener { mintaIzin() }
+            text = "Minta Izin Shizuku (popup)"
+            setOnClickListener { popupSudahDitembak = false; tembakPopupIzin() }
+        })
+        induk.addView(Button(this).apply {
+            text = "Buka Shizuku Sekali (pancing binder)"
+            setOnClickListener { bukaShizuku() }
         })
         induk.addView(Button(this).apply {
             text = "Nyalakan Layanan Lokal (127.0.0.1:19101)"
             setOnClickListener { nyalakanLayanan() }
         })
         setContentView(induk)
+        Shizuku.addBinderReceivedListenerSticky(saatBinderTiba)
         Shizuku.addRequestPermissionResultListener { _, _ -> segarkanStatus() }
         segarkanStatus()
+        tembakPopupIzin()
     }
 
     override fun onResume() {
         super.onResume()
         segarkanStatus()
+        tembakPopupIzin()  // kembali dari aplikasi Shizuku -> popup langsung muncul
     }
 
+    override fun onDestroy() {
+        Shizuku.removeBinderReceivedListener(saatBinderTiba)
+        super.onDestroy()
+    }
+
+    private fun binderHidup(): Boolean =
+        try { Shizuku.pingBinder() } catch (e: Throwable) { false }
+
+    private fun izinAda(): Boolean =
+        binderHidup() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+
     private fun segarkanStatus() {
-        val hidup = try { Shizuku.pingBinder() } catch (e: Throwable) { false }
-        val izin = hidup && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
         status.text = when {
-            !hidup -> "Shizuku tidak hidup — aktifkan Shizuku dulu."
-            !izin -> "Shizuku hidup, izin belum diberikan."
+            !binderHidup() -> "Binder Shizuku belum tiba. Ketuk 'Buka Shizuku Sekali', lalu kembali ke sini — popup izin muncul otomatis."
+            !izinAda() -> "Shizuku hidup, izin belum diberikan — popup izin ditembakkan."
             else -> "Siap. Layanan lokal dapat dinyalakan."
         }
     }
 
-    private fun mintaIzin() {
-        if (Shizuku.pingBinder() && Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
-            Shizuku.requestPermission(1)
+    private fun tembakPopupIzin() {
+        if (popupSudahDitembak) return
+        if (binderHidup() && !izinAda()) {
+            popupSudahDitembak = true
+            Shizuku.requestPermission(1)  // <- dialog popup resmi Shizuku
         }
+    }
+
+    private fun bukaShizuku() {
+        popupSudahDitembak = false
+        val niat = packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api")
+        if (niat != null) startActivity(niat)
     }
 
     private fun nyalakanLayanan() {

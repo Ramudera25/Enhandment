@@ -15,6 +15,12 @@ langkah, lalu memilih tingkat model:
 
 CLI: 04-router-model.py "<jenis>" "<cuplikan konteks>"
   -> mencetak nama tingkat + saran alias (bisa ditimpa lewat MD_MODEL_*).
+
+ATURAN ANGGARAN (terbukti 8 Okt 2026, lihat PENGUJIAN.md Fase 7): langkah
+RENCANA yang dirutekan ke model reasoning WAJIB dipanggil dengan
+max_tokens besar (>= 4000). Model `utama` (Atria) dengan anggaran kecil
+menghabiskan seluruhnya untuk reasoning dan mengembalikan konten KOSONG
+(finish=length); dengan 4000 ia menjawab rencana lengkap (finish=stop).
 """
 import os
 import sys

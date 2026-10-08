@@ -16,6 +16,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- Penanda agar aplikasi MUNCUL di daftar "Application management"
+             aplikasi Shizuku (manajer memindai penanda ini + provider). -->
+        <meta-data android:name="moe.shizuku.client.V3_SUPPORT" android:value="true" />
         <service android:name=".LayananLokal" android:exported="false" />
         <provider android:name="rikka.shizuku.ShizukuProvider"
             android:authorities="id.musedroid.pendamping.shizuku"
