@@ -30,12 +30,30 @@ V3.x — karena keduanya hidup di APK yang sama.
   xml meta-data): peristiwa jendela/konten/fokus/teks/klik/skrol,
   debounce 40 ms, salinan disimpan sebagai model datar (paket, kelas,
   teks, desc, bounds, klik/edit/fokus) + nomor versi + stempel waktu.
-  Penyaji di **127.0.0.1:19102**, satu baris per koneksi, balasan JSON:
-  `PING`, `PAKET?`, `TEKS? <teks>`, `CARI <teks>` (persis dulu, lalu
-  substring), `POHON` (maks 800 node bermakna), `ISI <teks>`
-  (ACTION_SET_TEXT pada node edit fokus — dikerjakan pada node HIDUP,
-  bukan salinan). Server hanya ada selama layanan aktif: ketiadaannya
+  Penyaji di **127.0.0.1:19102**: **satu baris per koneksi** — klien
+  membuka koneksi baru untuk tiap perintah dan menerima satu baris
+  balasan JSON. Perintah observasi: `PING`, `PAKET?`, `TEKS? <teks>`,
+  `CARI <teks>` (persis dulu, lalu substring), `POHON` (maks 800 node
+  bermakna), `ISI <teks>` (ACTION_SET_TEXT pada node edit fokus —
+  dikerjakan pada node HIDUP, bukan salinan). Sejak **V4.1** `ISI`
+  menunggu kolom edit yang FOKUS muncul maks ±600 ms (5 percobaan ×
+  jeda 120 ms) sebelum jatuh ke kolom cadangan, dan balasannya memuat
+  `tunggu_ms`. Server hanya ada selama layanan aktif: ketiadaannya
   adalah sinyal turun-kelas yang jujur.
+- **Perintah gestur (V4.1, `LayananAkses.kt`)** — pohon kini juga
+  tangan: `KETUK x y`, `TAHAN x y` (tekan 650 ms),
+  `GESER x1 y1 x2 y2 [ms]`, dan `GLOBAL BACK|HOME|RECENTS`,
+  dieksekusi `dispatchGesture`/`performGlobalAction` oleh layanan
+  aksesibilitas sendiri — tanpa rish, tanpa Shizuku. Pra-syaratnya
+  `android:canPerformGestures="true"` pada meta-data layanan di
+  `res/xml/layanan_akses.xml` (di advance/10): properti
+  `capabilities` hanya-baca dari Kotlin, jadi **XML adalah sumber
+  otoritatif** kemampuan ini. Balasan gestur berbentuk
+  `{ok, versi_sblm, versi_ssdh, naik, latensi_ms}` dan baru dikirim
+  sesudah **versi salinan naik** (batas tunggu 1,2 dtk) — aksi dan
+  verifikasi dalam satu perjalanan socket. Angka perangkat: KETUK
+  satu layar 234–237 ms, GESER 332–358 ms, GLOBAL BACK 374–441 ms
+  (PENGUJIAN.md Fase 18).
 - `LayananDepan.kt` — foreground service (tipe `specialUse`, notifikasi
   tetap "Pendamping siaga"). `onStartCommand` menyalakan
   `LayananLokal` sekalian — satu pintu masuk untuk seluruh tumpukan.

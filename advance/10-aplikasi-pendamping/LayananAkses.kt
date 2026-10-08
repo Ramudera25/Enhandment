@@ -13,7 +13,14 @@
 //   POHON         -> {"versi":N,"umur_ms":N,"nodes":[{t,d,k,b,klik,edit,fokus}]}
 //   ISI <teks>    -> {"ok":bool,"sebab":"..."}  (set-text pada node edit
 //                     yang sedang fokus — dikerjakan pada node HIDUP,
-//                     bukan pada salinan, sesuai aturan kebenaran desain)
+//                     bukan pada salinan, sesuai aturan kebenaran desain;
+//                     V4.1: menunggu kolom fokus muncul maks ~600 ms dulu)
+//   KETUK x y     -> {"ok":bool,"versi_sblm":N,"versi_ssdh":N,"naik":bool,
+//   TAHAN x y        "latensi_ms":N}  (gestur dispatchGesture V4.1 —
+//   GESER x1 y1 x2 y2 [ms]   tangan di proses yang sama dengan mata;
+//                     balasan menunggu versi salinan NAIK (verifikasi
+//                     bawaan, batas 1,2 dtk) sebelum dikirim)
+//   GLOBAL BACK|HOME|RECENTS -> sama (performGlobalAction)
 //
 // Aturan kebenaran (DESAIN-V3-POHON-UI.md §4): umur salinan selalu
 // dilaporkan; konsumen menolak jawaban basi untuk langkah pengubah layar;
@@ -24,6 +31,8 @@ package id.musedroid.pendamping
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.accessibilityservice.GestureDescription
+import android.graphics.Path
 import android.graphics.Rect
 import android.os.Bundle
 import android.os.Handler
@@ -36,6 +45,8 @@ import java.io.InputStreamReader
 import java.io.PrintWriter
 import java.net.InetAddress
 import java.net.ServerSocket
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import org.json.JSONArray
 import org.json.JSONObject
@@ -84,6 +95,9 @@ class LayananAkses : AccessibilityService() {
             flags = AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
                 AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or
                 AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS
+            // Kemampuan gestur (CAPABILITY_CAN_PERFORM_GESTURES) TIDAK diset
+            // di sini — properti itu hanya-baca dari Kotlin. Sumber otoritatifnya
+            // res/xml/layanan_akses.xml: android:canPerformGestures="true".
             notificationTimeout = 40
         }
         instans = this
@@ -153,26 +167,40 @@ class LayananAkses : AccessibilityService() {
 
     fun isiTeks(teks: String): JSONObject {
         val out = JSONObject()
-        val akar = try { rootInActiveWindow } catch (e: Exception) { null }
-        if (akar == null) return out.put("ok", false).put("sebab", "tidak ada jendela aktif")
+        // V4.1: kolom kerap baru memperoleh fokus beberapa ratus milidetik
+        // sesudah layarnya tampil (kasus misi Pengaturan 8 Okt — ISI kalah
+        // balapan fokus lalu jatuh ke input-text). Tunggu kolom FOKUS
+        // muncul maks ~600 ms (5 percobaan, jeda 120 ms) sebelum menyerah
+        // ke kolom cadangan yang tidak fokus.
         var sasaran: AccessibilityNodeInfo? = null
         var cadangan: AccessibilityNodeInfo? = null
-        val tumpukan = ArrayDeque<AccessibilityNodeInfo>()
-        tumpukan.addLast(akar)
-        var hitung = 0
-        while (tumpukan.isNotEmpty() && hitung < 5000) {
-            val n = tumpukan.removeLast()
-            hitung++
-            try {
-                if (n.isEditable) {
-                    if (n.isFocused) { sasaran = n; break }
-                    if (cadangan == null) cadangan = n
-                }
-                for (i in n.childCount - 1 downTo 0) {
-                    val anak = n.getChild(i)
-                    if (anak != null) tumpukan.addLast(anak)
-                }
-            } catch (e: Exception) { /* lewati */ }
+        var tungguMs = 0L
+        var percobaan = 0
+        while (true) {
+            val akar = try { rootInActiveWindow } catch (e: Exception) { null }
+                ?: return out.put("ok", false).put("sebab", "tidak ada jendela aktif")
+            sasaran = null
+            val tumpukan = ArrayDeque<AccessibilityNodeInfo>()
+            tumpukan.addLast(akar)
+            var hitung = 0
+            while (tumpukan.isNotEmpty() && hitung < 5000) {
+                val n = tumpukan.removeLast()
+                hitung++
+                try {
+                    if (n.isEditable) {
+                        if (n.isFocused) { sasaran = n; break }
+                        if (cadangan == null) cadangan = n
+                    }
+                    for (i in n.childCount - 1 downTo 0) {
+                        val anak = n.getChild(i)
+                        if (anak != null) tumpukan.addLast(anak)
+                    }
+                } catch (e: Exception) { /* lewati */ }
+            }
+            if (sasaran != null || percobaan >= 4) break
+            percobaan++
+            Thread.sleep(120)
+            tungguMs += 120
         }
         val node = sasaran ?: cadangan
             ?: return out.put("ok", false).put("sebab", "tidak ada kolom edit di jendela aktif")
@@ -181,7 +209,93 @@ class LayananAkses : AccessibilityService() {
         val ok = try { node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args) }
             catch (e: Exception) { false }
         if (ok) segarkan()
-        return out.put("ok", ok).put("sebab", if (ok) "" else "ACTION_SET_TEXT ditolak node")
+        return out.put("ok", ok).put("tunggu_ms", tungguMs)
+            .put("sebab", if (ok) "" else "ACTION_SET_TEXT ditolak node")
+    }
+
+    // ---- gestur (V4.1): tangan di proses yang sama dengan mata ----
+    // dispatchGesture dieksekusi sistem atas nama layanan; balasan socket
+    // menunggu versi salinan NAIK (bukti layar berubah) maks 1,2 dtk, jadi
+    // satu perintah = aksi + verifikasi dalam satu perjalanan socket.
+
+    private fun tungguVersiNaik(versiSebelum: Long, batasMs: Long = 1200): Boolean {
+        val mulai = SystemClock.uptimeMillis()
+        while (SystemClock.uptimeMillis() - mulai < batasMs) {
+            if (PohonUI.versi > versiSebelum) return true
+            Thread.sleep(25)
+        }
+        return PohonUI.versi > versiSebelum
+    }
+
+    private fun lakukanGestur(bangun: () -> GestureDescription): JSONObject {
+        val out = JSONObject()
+        val versiSebelum = PohonUI.versi
+        val mulai = SystemClock.uptimeMillis()
+        val gerbang = CountDownLatch(1)
+        var hasilKirim = false
+        penangan.post {
+            try {
+                hasilKirim = dispatchGesture(bangun(), object : GestureResultCallback() {
+                    override fun onCompleted(g: GestureDescription?) { gerbang.countDown() }
+                    override fun onCancelled(g: GestureDescription?) { gerbang.countDown() }
+                }, null)
+            } catch (e: Exception) {
+                gerbang.countDown()
+            }
+        }
+        gerbang.await(900, TimeUnit.MILLISECONDS)
+        val naik = tungguVersiNaik(versiSebelum)
+        val lat = SystemClock.uptimeMillis() - mulai
+        return out.put("ok", hasilKirim).put("versi_sblm", versiSebelum)
+            .put("versi_ssdh", PohonUI.versi).put("naik", naik)
+            .put("latensi_ms", lat)
+    }
+
+    fun gesturKetuk(x: Int, y: Int): JSONObject = lakukanGestur {
+        val jalur = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
+        GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(jalur, 0, 80)).build()
+    }
+
+    fun gesturTahan(x: Int, y: Int): JSONObject = lakukanGestur {
+        val jalur = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
+        GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(jalur, 0, 650)).build()
+    }
+
+    fun gesturGeser(x1: Int, y1: Int, x2: Int, y2: Int, durasiMs: Long): JSONObject =
+        lakukanGestur {
+            val jalur = Path().apply {
+                moveTo(x1.toFloat(), y1.toFloat())
+                lineTo(x2.toFloat(), y2.toFloat())
+            }
+            GestureDescription.Builder()
+                .addStroke(GestureDescription.StrokeDescription(
+                    jalur, 0, durasiMs.coerceIn(50, 2000))).build()
+        }
+
+    fun aksiGlobal(nama: String): JSONObject {
+        val out = JSONObject()
+        val kode = when (nama) {
+            "BACK" -> GLOBAL_ACTION_BACK
+            "HOME" -> GLOBAL_ACTION_HOME
+            "RECENTS" -> GLOBAL_ACTION_RECENTS
+            else -> return out.put("ok", false)
+                .put("sebab", "aksi global tidak dikenal: $nama")
+        }
+        val versiSebelum = PohonUI.versi
+        val mulai = SystemClock.uptimeMillis()
+        val gerbang = CountDownLatch(1)
+        var okKirim = false
+        penangan.post {
+            okKirim = try { performGlobalAction(kode) } catch (e: Exception) { false }
+            gerbang.countDown()
+        }
+        gerbang.await(900, TimeUnit.MILLISECONDS)
+        val naik = tungguVersiNaik(versiSebelum)
+        return out.put("ok", okKirim).put("versi_sblm", versiSebelum)
+            .put("versi_ssdh", PohonUI.versi).put("naik", naik)
+            .put("latensi_ms", SystemClock.uptimeMillis() - mulai)
     }
 
     // ---- penyaji socket 19102 ----
@@ -241,6 +355,33 @@ class LayananAkses : AccessibilityService() {
                     .put("nodes", arr).toString()
             }
             "ISI" -> (instans?.isiTeks(arg)
+                ?: JSONObject().put("ok", false).put("sebab", "layanan tidak aktif")).toString()
+            "KETUK", "TAHAN" -> {
+                val b = arg.trim().split(Regex("\\s+")).mapNotNull { it.toIntOrNull() }
+                val lay = instans
+                when {
+                    lay == null -> JSONObject().put("ok", false)
+                        .put("sebab", "layanan tidak aktif").toString()
+                    b.size < 2 -> JSONObject().put("ok", false)
+                        .put("sebab", "format: $kata x y").toString()
+                    kata == "KETUK" -> lay.gesturKetuk(b[0], b[1]).toString()
+                    else -> lay.gesturTahan(b[0], b[1]).toString()
+                }
+            }
+            "GESER" -> {
+                val b = arg.trim().split(Regex("\\s+")).mapNotNull { it.toIntOrNull() }
+                val lay = instans
+                when {
+                    lay == null -> JSONObject().put("ok", false)
+                        .put("sebab", "layanan tidak aktif").toString()
+                    b.size < 4 -> JSONObject().put("ok", false)
+                        .put("sebab", "format: GESER x1 y1 x2 y2 [ms]").toString()
+                    else -> lay.gesturGeser(
+                        b[0], b[1], b[2], b[3],
+                        if (b.size >= 5) b[4].toLong() else 300L).toString()
+                }
+            }
+            "GLOBAL" -> (instans?.aksiGlobal(arg.trim().uppercase())
                 ?: JSONObject().put("ok", false).put("sebab", "layanan tidak aktif")).toString()
             else -> JSONObject().put("ok", false)
                 .put("sebab", "perintah tidak dikenal").toString()

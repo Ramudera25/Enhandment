@@ -29,7 +29,10 @@
 #   3. mode jembatan — keduanya mati, rish/Shizuku hidup: dump lewat
 #      `uiautomator dump` via rish + tangan `input` via rish. Lambat,
 #      tapi jujur dan tetap berpenjaga TARGET.
-# Tangan (klik/geser/tombol) lewat u2 bila hidup, selain itu rish.
+# Tangan: sejak V4.1 utamanya GESTUR POHON (KETUK/GESER/GLOBAL lewat
+# server pohon 19102 — dieksekusi layanan aksesibilitas sendiri,
+# balasan membawa bukti versi naik; jalan walau Shizuku mati).
+# Cadangan berurutan: u2 bila hidup, lalu rish.
 #
 # ATURAN KEBENARAN (DESAIN-V3-POHON-UI.md §4) — ditegakkan di kode, bukan
 # sekadar ditulis:
@@ -137,6 +140,8 @@ class KlienPohon:
       POHON       -> {"versi":N,"umur_ms":N,"nodes":[{t,d,k,b,klik,
                       edit,fokus}]}
       ISI <teks>  -> {"ok":bool,"sebab":"..."}  (set-text node fokus hidup)
+      KETUK/GESER/TAHAN/GLOBAL (V4.1) -> {"ok":bool,"versi_sblm":N,
+                      "versi_ssdh":N,"naik":bool,"latensi_ms":N}
     """
 
     def __init__(self):
@@ -275,19 +280,73 @@ class Runner:
         return xml
 
     # -- tangan ----------------------------------------------------------
+    def _gestur(self, perintah):
+        """Satu perintah gestur ke server pohon. Mengembalikan dict
+        balasan, atau None HANYA bila pohon tidak menjawab sama sekali
+        (koneksi mati) — satu-satunya keadaan yang membolehkan jatuh ke
+        tangan cadangan. Balasan ok=false dari layanan DIPERCAYA (gestur
+        ditolak): TIDAK diulangi lewat tangan lain, agar tidak terjadi
+        ketukan ganda hantu."""
+        try:
+            if self.pohon.sock is not None:
+                self.pohon.sock.settimeout(6)
+            j = self.pohon.tanya(perintah)
+            if self.pohon.sock is not None:
+                self.pohon.sock.settimeout(3)
+            v = j.get("versi_ssdh")
+            if isinstance(v, int):
+                self.versi = v
+            return j
+        except Exception:
+            self.pohon_hidup = False
+            return None
+
+    def _tangan_cadangan(self):
+        return "u2" if self.u2_hidup else "rish"
+
     def tangan_klik(self, x, y):
+        if self.tangan == "pohon":
+            j = self._gestur("KETUK %d %d" % (x, y))
+            if j is not None:
+                if not j.get("ok"):
+                    self.catat("INFO", "gestur KETUK ditolak layanan pohon "
+                                       "(ok=false) — tidak diulang via cadangan")
+                return
+            self.tangan = self._tangan_cadangan()
+            self.catat("INFO", "tangan pohon tidak menjawab — turun ke "
+                               "tangan %s" % self.tangan)
         if self.tangan == "u2":
             self.klien.klik(x, y)
         else:
             rish("input tap %d %d" % (x, y))
 
     def tangan_geser(self, x1, y1, x2, y2, ms):
+        if self.tangan == "pohon":
+            j = self._gestur("GESER %d %d %d %d %d" % (x1, y1, x2, y2, ms))
+            if j is not None:
+                if not j.get("ok"):
+                    self.catat("INFO", "gestur GESER ditolak layanan pohon "
+                                       "(ok=false) — tidak diulang via cadangan")
+                return
+            self.tangan = self._tangan_cadangan()
+            self.catat("INFO", "tangan pohon tidak menjawab — turun ke "
+                               "tangan %s" % self.tangan)
         if self.tangan == "u2":
             self.klien.geser(x1, y1, x2, y2, ms)
         else:
             rish("input swipe %d %d %d %d %d" % (x1, y1, x2, y2, ms))
 
     def tangan_tombol(self, nama):
+        if self.tangan == "pohon" and nama in ("back", "home"):
+            j = self._gestur("GLOBAL %s" % nama.upper())
+            if j is not None:
+                if not j.get("ok"):
+                    self.catat("INFO", "GLOBAL %s ditolak layanan pohon"
+                                       % nama.upper())
+                return
+            self.tangan = self._tangan_cadangan()
+            self.catat("INFO", "tangan pohon tidak menjawab — turun ke "
+                               "tangan %s" % self.tangan)
         if self.tangan == "u2" and nama in ("home", "back", "enter"):
             self.klien.tombol(nama)
         else:
@@ -713,7 +772,8 @@ class Runner:
                                     "Shizuku dari aplikasinya, atau periksa "
                                     "pendamping & server residen.")
                 return 1
-        self.tangan = "u2" if self.u2_hidup else "rish"
+        self.tangan = ("pohon" if self.pohon_hidup else
+                       "u2" if self.u2_hidup else "rish")
         self.catat("MULAI", "tugas: %s (mode %s, tangan %s%s)" % (
             path, self.mode, self.tangan,
             ", pohon v%s" % self.versi if self.mode == "pohon" else ""))

@@ -154,6 +154,48 @@ Semua 10 peningkatan di `advance/` diuji di perangkat nyata. Ringkasnya:
   V4.1 adalah menunggu versi snapshot naik/fokus muncul maks 600 ms
   sebelum fallback.
 
+### 8 Okt 2026 malam — V4.1: gestur pohon & tangan mandiri (advance/15–16)
+- **Pohon mendapat tangan.** Socket 19102 kini menerima perintah gestur
+  — `KETUK`, `TAHAN` (tekan 650 ms), `GESER`, `GLOBAL
+  BACK|HOME|RECENTS` — yang dieksekusi `dispatchGesture`/
+  `performGlobalAction` oleh layanan aksesibilitas sendiri.
+  Pra-syaratnya `android:canPerformGestures="true"` di
+  `res/xml/layanan_akses.xml`; properti `capabilities` ternyata
+  hanya-baca dari Kotlin, jadi XML yang otoritatif. Balasan gestur
+  menunggu versi salinan NAIK maks 1,2 dtk: satu perintah = aksi +
+  verifikasi. Mengapa ini penting: tangan lama (rish dari VM) memungut
+  ±0,3–0,7 dtk per ketukan dan mati bersama Shizuku; tangan pohon
+  hidup selama layanan aksesibilitas hidup.
+- **Angka perangkat (Pengaturan Android).** Kueri `CARI` 6 ms;
+  `KETUK` satu layar **234–237 ms**; `GESER` 332–358 ms via socket
+  (636 ms lewat runner termasuk verifikasi langkah); `GLOBAL BACK`
+  374–441 ms; `TAHAN` 1.422 ms (termasuk durasi tekannya 650 ms).
+  `KETUK` yang mengganti halaman penuh: 816–1.168 ms — didominasi
+  waktu aplikasi berpindah halaman + menunggu keadaan terverifikasi,
+  bukan latensi kendali. Vonis jujurnya: target <1 dtk tercapai untuk
+  siklus kendali satu layar; transisi halaman penuh 0,8–1,2 dtk karena
+  verifikasi menolak pulang sebelum halaman benar-benar berganti.
+- **Poles `ISI` menutup catatan Fase 17.** Layanan menunggu kolom edit
+  FOKUS muncul maks ±600 ms (5 × 120 ms) sebelum jatuh ke kolom
+  cadangan; balasan kini membawa `tunggu_ms`. Kasus balapan fokus yang
+  dulu menggagalkan: `tunggu_ms=240` → `ok=true`. Uji bersih: tunggu
+  0 ms, teks masuk, hasil pencarian “Bluetooth” tampil (27 hasil).
+- **`misi-ad-hoc`: tangan pohon utama.** Presedensi tangan kini pohon
+  → u2 → rish; mundur hanya bila pohon tidak menjawab sama sekali.
+  Balasan `ok=false` dari layanan dipercaya dan **tidak diulang** via
+  tangan lain — anti ketuk ganda hantu. Misi uji: **5/5 OK** mode
+  “tangan pohon”, total 12,99 dtk (`BUKA_APLIKASI` 8,1 dtk darinya =
+  cold start aplikasi).
+- **Kejadian pemasangan.** APK **725.484 byte** terpasang 20.00
+  (update di tempat; layanan aksesibilitas mengikat ulang sendiri).
+  AutoX.js diuninstall atas perintah pemilik — 0 paket tersisa.
+  Update paket membunuh layanan depan pendamping; percobaan penjaga
+  menghidupkannya via rish gagal sekali, lalu pulih lewat tombol
+  “NYALAKAN LAYANAN” di aplikasi — diketuk memakai gestur pohon —
+  dan 19101 menjawab PONG lagi. Protokol server ditegaskan: **satu
+  baris per koneksi**, klien membuka koneksi baru per perintah.
+  Detail lengkap: PENGUJIAN.md Fase 18.
+
 ---
 
 ## 2. Arsitektur & alur

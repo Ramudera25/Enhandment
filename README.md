@@ -24,7 +24,7 @@
 *ABSOLUTE CINEMA — HP-nya kerja sendiri, kamu tinggal angkat tangan.*
 
 ![status](https://img.shields.io/badge/status-terverifikasi%20di%20perangkat%20nyata-brightgreen)
-![versi](https://img.shields.io/badge/versi-V4.0-blueviolet)
+![versi](https://img.shields.io/badge/versi-V4.1-blueviolet)
 ![root](https://img.shields.io/badge/root-tidak%20perlu-blue)
 ![bahasa](https://img.shields.io/badge/bahasa-Indonesia-orange)
 ![lisensi](https://img.shields.io/badge/lisensi-MIT-lightgrey)

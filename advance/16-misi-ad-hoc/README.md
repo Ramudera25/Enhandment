@@ -19,10 +19,12 @@ jalan tidak masuk akal. Paket ini menggeneralisasi polanya.
 > `TUNGGU_TEKS` terukur **8 ms** dan `CEK_TEKS` **7 ms**. Catatan
 > jujur: `ISI_TEKS` via pohon sempat gagal karena snapshot belum
 > menangkap fokus kolom (balapan timing), lalu jatuh ke `input text`
-> rish yang terverifikasi; poles V4.1 adalah menunggu versi snapshot
-> naik/fokus muncul maks 600 ms sebelum fallback. Daftar di akhir
-> dokumen kini dibaca sebagai cakupan uji lanjutan, bukan bukti bahwa
-> misi dasar belum pernah jalan.
+> rish yang terverifikasi. **Poles itu terbit di V4.1 (Fase 18):**
+> `ISI` kini menunggu kolom fokus maks ±600 ms sebelum fallback, dan
+> runner memakai **tangan pohon** sebagai tangan utama (lihat “Tangan
+> berlapis” di bawah) — misi uji V4.1 LULUS 5/5 dalam mode tangan
+> pohon. Daftar di akhir dokumen kini dibaca sebagai cakupan uji
+> lanjutan, bukan bukti bahwa misi dasar belum pernah jalan.
 
 ## Isi
 
@@ -96,6 +98,32 @@ Aturan `DESAIN-V3-POHON-UI.md` §4 yang **ditegakkan runner di kode**:
   tangan → langkah buta dibatalkan jujur.
 - `ISI_TEKS` yang mengaku berhasil tetapi teksnya tidak terlihat =
   misi berhenti jujur — tidak jatuh ke `KETIK` (risiko ketik ganda).
+
+## Tangan berlapis (V4.1)
+
+Sejak V4.1 runner punya **tangan pohon**: ketukan tidak lagi selalu
+memanggil rish dari VM (RTT SSH + spawn proses, dan mati bersama
+Shizuku), melainkan perintah gestur ke server pohon 19102 yang
+dieksekusi layanan aksesibilitas sendiri (advance/15). Presedensi
+tangan untuk `KETUK`/`KETUK_TEKS`/`GESER`/`TOMBOL`:
+
+1. **Tangan pohon** — `KETUK`/`TAHAN`/`GESER`/`GLOBAL` lewat 19102.
+   Balasannya membawa bukti versi salinan naik, jadi langkah tangan
+   sekaligus terverifikasi. Jalan selama layanan aksesibilitas hidup,
+   **termasuk saat Shizuku mati**.
+2. **u2** — JSON-RPC server residen, dipakai hanya bila pohon tidak
+   menjawab.
+3. **rish** — `input` via Shizuku; cadangan terakhir.
+
+Aturan jatuhnya ketat dan disengaja:
+
+- Runner mundur ke tangan berikutnya **hanya bila pohon tidak
+  menjawab sama sekali** (koneksi mati / layanan tidak aktif).
+- Balasan `ok=false` dari layanan **dipercaya dan tidak diulang**
+  lewat tangan lain — aturan **anti ketuk ganda hantu**: gestur yang
+  sebenarnya sudah mendarat tidak boleh diketuk kedua kali hanya
+  karena balasannya pesimis. Kegagalan dilaporkan apa adanya dan
+  verifikasi langkah yang memutuskan, seperti aturan kebenaran lain.
 
 ## Aturan formulir yang tata letaknya bergeser
 

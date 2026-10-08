@@ -434,3 +434,74 @@ fokus kolom muncul maks **600 ms** sebelum memutuskan fallback.
 Putusan: **LULUS dengan catatan di atas** — playbook misi ad-hoc kini
 terbukti di aplikasi non-Glints, dan jalur pengisian teks yang belum
 mulus sudah punya perbaikan terukur berikutnya.
+
+---
+
+**Fase 18 — gestur pohon & poles ISI (V4.1): LULUS (8 Okt 2026
+malam).** Tujuan: memberi pohon UI **tangan sendiri** — selama ini
+pohon hanya mata; setiap ketukan tetap memanggil rish dari VM
+(RTT SSH + spawn proses, ±0,3–0,7 dtk) dan lumpuh total saat Shizuku
+mati. Sesudah fase ini layanan aksesibilitas mengeksekusi gesturnya
+sendiri, dan misi bisa berjalan selama Shizuku mati. Perubahan:
+
+- **Perintah gestur baru di socket 19102** (`LayananAkses`):
+  `KETUK x y`, `TAHAN x y` (tekan 650 ms), `GESER x1 y1 x2 y2 [ms]`,
+  dan `GLOBAL BACK|HOME|RECENTS` — dieksekusi
+  `dispatchGesture`/`performGlobalAction` oleh layanan aksesibilitas
+  sendiri. Pra-syaratnya `android:canPerformGestures="true"` di
+  `res/xml/layanan_akses.xml`: properti `capabilities` hanya-baca dari
+  Kotlin, jadi **XML adalah sumber otoritatif** untuk kemampuan ini.
+  Balasan gestur menunggu **versi salinan NAIK** maks 1,2 dtk sebelum
+  dikirim — aksi + verifikasi dalam satu perjalanan socket:
+  `{ok, versi_sblm, versi_ssdh, naik, latensi_ms}`.
+- **Poles `ISI`** (menutup catatan Fase 17): layanan kini menunggu
+  kolom edit yang **FOKUS** muncul maks ±600 ms (5 percobaan × jeda
+  120 ms) sebelum jatuh ke kolom cadangan yang tidak fokus. Balasan
+  kini memuat `tunggu_ms` agar penantiannya terbaca, bukan ditebak.
+- **`misi-ad-hoc`: tangan pohon menjadi utama** — `KETUK`/`GESER`/
+  `GLOBAL` lewat 19102; mundur ke u2 lalu rish **hanya bila pohon
+  tidak menjawab sama sekali**. Balasan `ok=false` dari layanan
+  **dipercaya dan tidak diulang** lewat tangan lain (anti ketuk ganda
+  hantu: gestur yang sebenarnya mendarat tidak boleh diketuk dua kali
+  hanya karena balasannya pesimis).
+
+Angka terukur (Samsung A13, aplikasi Pengaturan):
+
+| Pengukuran | Hasil |
+|---|---|
+| Kueri `CARI` | 6 ms |
+| `KETUK` target satu layar | **234–237 ms** |
+| `GESER` lewat socket | 332–358 ms |
+| `GESER` lewat runner (termasuk verifikasi langkah) | 636 ms |
+| `GLOBAL BACK` | 374–441 ms |
+| `KETUK` transisi halaman penuh | 816–1.168 ms |
+| `TAHAN` (termasuk durasi tekan 650 ms) | 1.422 ms |
+| `ISI` kasus balapan fokus (Fase 17) | `tunggu_ms=240` → `ok=true` |
+| `ISI` uji bersih | tunggu 0 ms; teks masuk; hasil pencarian “Bluetooth” tampil (27 hasil) |
+
+Misi uji ad-hoc penuh berjalan **5/5 OK** dalam mode **“tangan
+pohon”**, total **12,99 dtk** — langkah terbesarnya `BUKA_APLIKASI`
+8,1 dtk, murni *cold start* aplikasi Pengaturan, bukan kendali.
+
+**Kejadian lain selama pemasangan.** APK baru **725.484 byte**
+terpasang pukul 20.00 sebagai update di tempat; layanan aksesibilitas
+**mengikat ulang sendiri** sesudahnya tanpa intervensi. AutoX.js —
+aplikasi pembanding dari saga aktivasi Fase 15 — **diuninstall** atas
+perintah pemilik; terverifikasi **0 paket tersisa**. Update paket
+sempat membunuh layanan depan pendamping: percobaan menghidupkannya
+kembali oleh penjaga via rish **gagal sekali**, lalu pulih lewat
+tombol “NYALAKAN LAYANAN” di aplikasi pendamping — diketuk memakai
+**gestur pohon yang baru lahir** — dan 19101 menjawab PONG lagi.
+Protokol server juga ditegaskan dalam praktiknya: **satu baris per
+koneksi** — klien membuka koneksi baru untuk tiap perintah
+(`KlienPohon` runner sudah menanganinya lewat coba-ulang).
+
+**Kesimpulan jujur.** Target “satu aksi di bawah 1 detik” **tercapai
+untuk siklus kendali satu layar** (ketuk 234–237 ms, geser ±0,33 dtk,
+kembali ±0,4 dtk — semuanya sudah termasuk verifikasi versi-naik).
+Transisi halaman penuh berada di **0,8–1,2 dtk**, dan itu bukan
+latensi kendali: balasan menunggu halaman aplikasi *benar-benar
+berganti* dan keadaan barunya terverifikasi. Tangan kini tidak lagi
+bergantung pada Shizuku — kaki yang paling sering mati justru tidak
+lagi bisa melumpuhkan misi. Putusan: **LULUS — terbit sebagai
+V4.1.**
