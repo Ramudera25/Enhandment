@@ -9,7 +9,7 @@
 > `advance/` supaya perjalanan pengembangannya tidak mengintimidasi siapa
 > pun, sekaligus terbuka untuk dipakai sebagai bahan upgrade berikutnya.
 >
-> Terakhir diperbarui: **8 Oktober 2026**.
+> Terakhir diperbarui: **9 Oktober 2026**.
 
 ---
 
@@ -195,6 +195,24 @@ Semua 10 peningkatan di `advance/` diuji di perangkat nyata. Ringkasnya:
   dan 19101 menjawab PONG lagi. Protokol server ditegaskan: **satu
   baris per koneksi**, klien membuka koneksi baru per perintah.
   Detail lengkap: PENGUJIAN.md Fase 18.
+
+### 8 Okt 2026 malam (lanjutan) — workflow misi HP dibakukan + audit repo
+- Alur V4.1 diuji ujung ke ujung lewat misi nyata dari chat: telusur
+  grup loker Pati di aplikasi Facebook — probe kaki (termasuk ambang
+  jaga baterai), penjaga target, observasi berlapis (pohon buta pada
+  teks postingan Litho → screenshot jadi kebenaran), ketuk dari hasil
+  `CARI` (ketukan koordinat hafalan mendarat di tab Notifikasi karena
+  header aplikasi bergeser — pelajaran dicatat), saringan profil, dan
+  deliverable `.txt`. Alur ini kini dokumen baku:
+  `advance/WORKFLOW-MISI-HP.md`.
+- Audit sinkronisasi repo (atas permintaan Travis "kirim semua progres"):
+  APK di repo identik hash-nya dengan build terpasang, sumber
+  `advance/10` identik dengan folder build, skrip HP utama tertracked
+  semua. Yang memang TIDAK masuk repo: toolchain build (`dl/` ±88 MB +
+  `kotlinc/` ±96 MB, diunduh `build.sh`) dan dua skrip pembantu kecil
+  yang hanya hidup di HP (`probe-u2.py`, `list-teks.py` — disinkronkan
+  pada jendela HP berikutnya; fungsinya terwakili `uji-pohon.py` +
+  `scripts/cek-siap.sh`).
 
 ---
 
