@@ -180,11 +180,26 @@ penuh, satu menunggu ketukan Travis:
 `max_tokens: 4000`, alias `utama` menjawab rencana lengkap
 (finish=stop) dan `cadangan-gemini` juga utuh. Aturan anggaran kini
 tertulis permanen di kepala `04-router-model.py`.
-(2) **TEMPEL eksekutor v2 — kode ditulis, uji perangkat menyusul.**
+(2) **TEMPEL eksekutor v2 — LULUS PENUH di perangkat (07.18).**
 Diagnosis kegagalan lama: eksekutor menekan-lama TANPA memastikan kolom
 fokus dan memakai koordinat dump pra-keyboard. v2: ketuk kolom dulu
 (fokus + keyboard naik) → dump SEGAR → tekan-lama 800 ms → menu
 Tempel/Paste → verifikasi kata pertama (mekanisme jujur dipertahankan).
+Log eksekutor: `OK 1 TEMPEL (7 karakter via clipboard,
+fokus+tekan-lama+menu @ 151 375, terverifikasi tampil)` + `CEK_TEKS
+"MUSEUJI" tampil` → **BERES 2/2** di formulir Add network (EditText
+native). Perjalanan debugnya sendiri berharga: dua percobaan awal tetap
+gagal karena (a) navigasi daftar Wi-Fi yang sedang memindai (baris
+"Add network" berpindah — pelajaran Fase 5 terulang) dan (b) `dump_xml`
+eksekutor membaca dump basi dari jembatan Download. Obat permanennya:
+**`dump_xml` kini mengutamakan server residen Fase 8** (JSON-RPC
+langsung dari dalam HP, selalu segar, 0,56 dtk) dengan jembatan lama
+sebagai cadangan yang kini **dijaga mtime** (dump basi ditolak). Catatan
+endpoint: jalur server u2 adalah `/jsonrpc/0` — `/jsonrpc` polos
+menjawab 404 (dugaan "proxy Termux" di tengah jalan terbukti keliru;
+pelajaran: tiru persis klien yang sudah terverifikasi).
+**Bukti daya tahan Fase 8 genap: server residen PID 17783 mencapai umur
+01:00:15** (start ±06.19 → 07.19) melewati kematian & restart Shizuku.
 (3) **Fase 9 — akar "binder tak tiba" dikoreksi & fitur popup dibangun.**
 Koreksi atas catatan sesi sebelumnya: **Sui.init adalah jalur Magisk —
 tidak berlaku di Shizuku non-root ini** (dihapus). Penanda

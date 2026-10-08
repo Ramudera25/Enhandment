@@ -46,10 +46,37 @@ catat() {  # catat <status> <pesan>
 }
 
 dump_xml() {
-  # Jembatan Download: output rish terpotong di ±8 KB, jadi XML dipindah dulu
-  # sebagai berkas ke Download (bisa ditulis rish), lalu dibaca dari sisi Termux.
+  # Jalur utama (8 Okt, Fase 8): server residen u2 di 127.0.0.1:9008 —
+  # dump 0,56 dtk dan selalu segar. Eksekutor berjalan di HP, jadi bisa
+  # memanggilnya langsung tanpa SSH.
+  local via_server
+  via_server="$(python3 -c '
+import json, urllib.request
+# Endpoint server u2 yang benar: /jsonrpc/0 (dengan /0) — /jsonrpc polos
+# menjawab 404 (terbukti 8 Okt; dugaan awal "proxy" ternyata keliru).
+# ProxyHandler kosong tetap dipasang sebagai asuransi env proxy Termux.
+opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+req = urllib.request.Request("http://127.0.0.1:9008/jsonrpc/0",
+  data=json.dumps({"jsonrpc":"2.0","id":1,"method":"dumpWindowHierarchy","params":[False,50]}).encode(),
+  headers={"Content-Type":"application/json"})
+try:
+    r = json.load(opener.open(req, timeout=6))
+    print(r.get("result") or "", end="")
+except Exception:
+    pass
+' 2>/dev/null)"
+  if [ "${via_server#\<?xml}" != "$via_server" ]; then printf '%s' "$via_server"; return 0; fi
+  # Cadangan: jembatan Download (output rish terpotong ±8 KB, XML dipindah
+  # sebagai berkas). PENJAGA KESEGARAN: berkas hanya diterima bila mtime-nya
+  # MAJU sesudah perintah dump — dump basi pernah menggagalkan TEMPEL
+  # (08 Okt: titik kolom dibaca dari halaman lama).
+  local berkas="/sdcard/Download/md-dump.xml" sebelum=""
+  [ -f "$berkas" ] && sebelum="$(stat -c %Y "$berkas" 2>/dev/null)"
   rish 'uiautomator dump /sdcard/md-dump.xml >/dev/null 2>&1; cp /sdcard/md-dump.xml /sdcard/Download/md-dump.xml >/dev/null 2>&1'
-  cat "/sdcard/Download/md-dump.xml" 2>/dev/null || cat "/storage/emulated/0/Download/md-dump.xml" 2>/dev/null
+  local sesudah=""
+  [ -f "$berkas" ] && sesudah="$(stat -c %Y "$berkas" 2>/dev/null)"
+  if [ -n "$sesudah" ] && [ "$sesudah" != "$sebelum" ]; then cat "$berkas" 2>/dev/null; return 0; fi
+  cat "$berkas" 2>/dev/null || cat "/storage/emulated/0/Download/md-dump.xml" 2>/dev/null
 }
 
 # cari_titik "teks" -> mencetak "x y" titik tengah elemen berteks itu (substring)
