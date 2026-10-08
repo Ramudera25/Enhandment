@@ -7,6 +7,12 @@
     <!-- WAJIB untuk ServerSocket lokal LayananLokal; tanpa ini bind() kena
          EACCES dan thread pendengar membunuh proses (terbukti 8 Okt 2026). -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- PENDAFTARAN klien Shizuku: manajer Shizuku memindai aplikasi yang
+         meminta izin ini untuk daftar "Application management" dan untuk
+         pengiriman binder. Tanpa baris ini aplikasi TIDAK terdaftar —
+         tidak muncul di list, binder tidak pernah dikirim, popup izin
+         tidak bisa muncul (akar masalah terbukti 8 Okt 2026). -->
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
 
     <application android:label="muse-droid Pendamping"
         android:theme="@android:style/Theme.Material.Light">

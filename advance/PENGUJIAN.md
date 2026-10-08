@@ -187,20 +187,29 @@ fokus dan memakai koordinat dump pra-keyboard. v2: ketuk kolom dulu
 Tempel/Paste → verifikasi kata pertama (mekanisme jujur dipertahankan).
 (3) **Fase 9 — akar "binder tak tiba" dikoreksi & fitur popup dibangun.**
 Koreksi atas catatan sesi sebelumnya: **Sui.init adalah jalur Magisk —
-tidak berlaku di Shizuku non-root ini** (dihapus). Yang benar: manajer/
-server Shizuku memindai aplikasi klien dari **penanda
-`moe.shizuku.client.V3_SUPPORT`** di manifest — belum ada di build lama,
-kini ditambah; dan server hanya membagikan binder **saat ia start**, jadi
-urutan yang benar: pasang build berpenanda DULU, restart server SESUDAH.
+tidak berlaku di Shizuku non-root ini** (dihapus). Penanda
+`moe.shizuku.client.V3_SUPPORT` ditambah ke manifest — perlu, tapi
+ternyata BUKAN kunci terakhirnya.
+**KUNCI SEBENARNYA (terbukti 07.06–07.08): deklarasi
+`<uses-permission android:name="moe.shizuku.manager.permission.API_V23"/>`
+belum ada di manifest.** Manajer Shizuku memindai deklarasi inilah untuk
+daftar "Application management" dan pengiriman binder — tanpa baris itu
+aplikasi tidak terdaftar: tidak muncul di list, binder tidak pernah
+dikirim, popup izin tidak mungkin muncul, seberapa pun server di-restart.
+Sesudah baris itu ditambah + rebuild + pasang via rish: aplikasi
+**muncul di Application management dengan saklar AKTIF**, status dalam
+aplikasi membaca **"Siap"** (binder hidup + izin granted di sisi server),
+dan layanan lokal menjawab **PING → PONG** di build final. **Fase 9
+TUNTAS PENUH** — syarat "bersyarat"-nya gugur; penangan DUMP/KETUK di
+layanan tetap stub jujur menunggu penyambungan UserService (peningkatan
+terjadwal, bukan syarat lulus fase).
 Atas permintaan Travis ("bikin fitur popup agar izinnya lebih gampang"),
-MainActivity kini memasang **listener binder + auto-`requestPermission`**:
+MainActivity memasang **listener binder + auto-`requestPermission`**:
 begitu binder tiba dan izin belum ada, dialog izin resmi Shizuku muncul
 sendiri (termasuk saat kembali dari aplikasi Shizuku lewat tombol
-"Buka Shizuku Sekali"). Build terpasang 06.50–06.56 lewat rish; verifikasi
-popup → Allow → status "Siap" menunggu satu restart Shizuku oleh Travis
-(server terakhir start SEBELUM build berpenanda terpasang). Pasang manual
-oleh pengguna gagal di penginstal bawaan (APK build sendiri) — jalur
-`pm install` via rish adalah jalur pasang resmi proyek ini.
+"Buka Shizuku Sekali"). Pasang manual oleh pengguna gagal di penginstal
+bawaan (APK build sendiri) — jalur `pm install` via rish adalah jalur
+pasang resmi proyek ini.
 Catatan kerapuhan tambahan: dump lewat jalur lambat bisa terbaca basi
 (memori halaman lama) bila pengguna sedang aktif mengemudi — verifikasi
 layar sensitif waktu sebaiknya lewat dump server residen (0,56 dtk).
