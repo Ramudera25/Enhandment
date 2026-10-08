@@ -90,6 +90,21 @@ Semua 10 peningkatan di `advance/` diuji di perangkat nyata. Ringkasnya:
 - Sesi ini juga membuktikan rantai pemulihan: ketiga kaki kendali mati
   bersamaan (pola 08.41 berulang) → Shizuku di-Start pemilik → server
   residen dihidupkan ulang lewat rish → papan hijau lagi.
+- **Paket percepatan operasional (perintah pemilik, sesudah eksekusi
+  manual 2 item antrean HP berhasil pukul 11.41)**: (a) cron riset pagi
+  kini MEWAJIBKAN URL detail listing (`/opportunities/jobs/...`) pada
+  baris antrean HP — deep link adalah satu-satunya bentuk URL yang
+  diklaim aplikasi, terbukti lagi di Fase 12 (domain akar lari ke
+  browser); (b) `advance/12` — misi navigasi Glints (generator
+  `buat-misi.py` + template tautan/cari) + direktif `TAUTAN` di
+  misi-cepat + strategi KETIK/TEMPEL diperbaiki berbasis bukti kolom
+  pencarian (input text terverifikasi mengalahkan menu tempel di sana);
+  misi pencarian 8 langkah tuntas **12,6 dtk**; (c) `advance/13` —
+  penjaga kaki residen: server residen yang dibunuh dipulihkan penjaga
+  dalam **±91 dtk**, dan notifikasi kematian Shizuku kini anti-alarm-
+  palsu (probe ganda) setelah siklus pertama penjaga sempat menembak
+  satu notifikasi palsu akibat timeout binder sesaat. PENGUJIAN.md
+  Fase 12–13.
 
 ---
 
@@ -236,9 +251,16 @@ memperbarui statusnya di file ini.
    residen menjalankan semua langkah dengan polling tunggu lokal
    100–200 ms; laporan hanya hasil akhir. Perkiraan hemat: ±20–35 dtk
    per misi 15 langkah (pajak jaringan per langkah hilang total).
+   **STATUS 8 Okt siang: DITERAPKAN** sebagai `advance/11` (runner
+   `misi-cepat.py`) — polling TUNGGU 250 ms; misi standar 9 langkah
+   47,8 → 22,3 dtk bersama butir 2 (lihat lini masa §1).
 2. **Kueri terarah menggantikan dump penuh** — server menjawab "di mana
    teks X" dengan bounds saja (<1 KB) alih-alih pohon XML 60–130 KB.
    Target: siklus cari→ketuk ±0,9 dtk → ±0,3–0,5 dtk di halaman wajar.
+   **STATUS 8 Okt siang: DITERAPKAN** di runner yang sama — pencarian
+   mengurai pohon di dalam proses runner dan hanya memakai bounds;
+   langkah KETUK_TEKS terukur 0,69 dtk termasuk ketuk + verifikasi
+   perubahan layar (misi standar advance/11).
 3. **Isi teks tanpa keyboard** — set-text langsung via pendamping / tempel
    terverifikasi; menghilangkan kasus terberat (formulir berkeyboard
    ±1,7 dtk).
@@ -251,6 +273,11 @@ memperbarui statusnya di file ini.
    lebih proaktif untuk server residen; pemulihan berjenjang yang jujur
    saat kaki kendali mati (yang bisa dipulihkan mesin dipulihkan, yang
    butuh manusia dilaporkan apa adanya).
+   **STATUS 8 Okt siang: SEBAGIAN DITERAPKAN** — penjaga residen
+   `advance/13` terpasang & teruji (server residen dipulihkan otomatis
+   ±91 dtk; kematian Shizuku diberitahukan ±1 menit dengan probe ganda
+   anti-alarm-palsu). Sisa butir ini: *foreground service* untuk aplikasi
+   pendamping — belum dibangun.
 
 ---
 

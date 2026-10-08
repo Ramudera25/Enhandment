@@ -25,6 +25,8 @@ muse-droid, dan **belum semuanya diuji di perangkat**. Aturannya sederhana:
 | 09 | Perencana + dry-run | `09-perencana.py` | Alat Python | **Teruji ✓ 8 Okt** — rantai penuh susun→uji (negatif tertangkap)→jalan→simpan→pakai→jalan. PENGUJIAN.md Fase 6 |
 | 10 | Aplikasi pendamping Shizuku (Jalan 2) | `10-aplikasi-pendamping/` | Kotlin + AIDL + `build.sh` | **TUNTAS 8 Okt** — terdaftar & terotorisasi di Shizuku (kunci: deklarasi API_V23), status "Siap", popup izin otomatis, **UserService tersambung: UID 2000, DUMP XML asli, KETUK/TOMBOL nyata** via socket 127.0.0.1:19101. PENGUJIAN.md Fase 9 + sesi percepatan |
 | 11 | Runner makro residen + kueri terarah | `11-makro-residen/` | Python (persisten, keep-alive) | **TERUJI 8 Okt** — roadmap jurnal butir 1+2 diterapkan: misi standar 9 langkah **47,8 → 22,3 dtk (2,1×)**; desain butir 4 (pohon UI tersimpan) di `DESAIN-V3-POHON-UI.md`. PENGUJIAN.md Fase 11 |
+| 12 | Misi navigasi Glints | `12-navigasi-glints/` | Template .job + generator Python | **TERUJI 8 Okt** — misi pencarian perusahaan 8 langkah **12,6 dtk** (perjalanan yang sama ±4–5 mnt secara interaktif); direktif baru `TAUTAN` (deep link) + strategi KETIK diperbaiki di misi-cepat. PENGUJIAN.md Fase 12 |
+| 13 | Penjaga kaki residen | `13-penjaga-kaki/` | Bash (loop 60 dtk di HP) | **TERUJI 8 Okt** — uji bunuh server residen: pulih **±91 dtk** tanpa manusia; notifikasi kematian Shizuku teruji via simulasi + probe ganda anti-alarm-palsu. PENGUJIAN.md Fase 13 |
 
 ## Kenapa tidak langsung jadi v2?
 

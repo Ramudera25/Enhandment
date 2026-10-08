@@ -187,6 +187,27 @@ class Runner:
             if not self.target or 'package="%s"' % self.target in xml:
                 return
 
+    def tautan(self, url):
+        # Deep link: intent VIEW. Jalur subprocess (shim am Termux) dulu,
+        # cadangan via rish (shell uid=2000) bila perintah gagal. Sesudah
+        # dispatch, tunggu paket TARGET tampil di dump (bukan sleep datar).
+        # Bila URL tidak diklaim aplikasi target (mis. link explore Glints
+        # yang lari ke browser), tunggu habis tanpa tampil — langkah
+        # berikutnya (TUNGGU_TEKS/CEK_TEKS) yang menyatakan gagal jujur.
+        r = subprocess.run(["am", "start", "-a", "android.intent.action.VIEW",
+                            "-d", url], capture_output=True, text=True, timeout=20)
+        if r.returncode != 0:
+            rish('am start -a android.intent.action.VIEW -d "%s"' % url)
+        t0 = time.time()
+        while time.time() - t0 < 6:
+            time.sleep(POLL_UBAH)
+            try:
+                xml = self.dump(paksa=True)
+            except Exception:
+                continue
+            if not self.target or 'package="%s"' % self.target in xml:
+                return
+
     def tunggu_teks(self, teks, timeout):
         t0 = time.time()
         jeda = POLL_TUNGGU if self.mode == "server" else 8
@@ -220,16 +241,27 @@ class Runner:
         self.tunggu_berubah(lama)
         time.sleep(0.4)
         kt = kolom_teks(self.dump(paksa=True)) or kt
-        # tekan-lama 800 ms (geser diam) lalu ketuk menu Tempel/Paste
-        self.klien.geser(kt[0], kt[1], kt[0], kt[1], 800)
-        time.sleep(0.6)
-        xml = self.dump(paksa=True)
-        tm = cari_titik(xml, "Tempel") or cari_titik(xml, "Paste")
-        if tm:
-            self.klien.klik(*tm)
-            cara = "fokus+tekan-lama+menu"
+        # Jalur A: chip clipboard di toolbar keyboard (Samsung Honeyboard) —
+        # node berisi potongan awal isi clipboard. Terverifikasi manual 8 Okt
+        # di kolom chat Glints; jalur menu tekan-lama justru GAGAL di kolom
+        # pencarian Glints (uji advance/12, 8 Okt 12.08) sehingga chip dicoba
+        # lebih dulu. Kolom masih kosong pada titik ini, jadi node yang cocok
+        # dengan potongan awal teks pastilah chip-nya, bukan isi kolom.
+        chip = cari_titik(self.xml_terakhir, teks[:15].strip()) if teks.strip() else None
+        if chip:
+            self.klien.klik(*chip)
+            cara = "chip-clipboard-keyboard"
         else:
-            raise MisiGagal("TEMPEL: menu Tempel/Paste tidak muncul")
+            # Jalur B: tekan-lama 800 ms (geser diam) lalu ketuk menu Tempel/Paste
+            self.klien.geser(kt[0], kt[1], kt[0], kt[1], 800)
+            time.sleep(0.6)
+            xml = self.dump(paksa=True)
+            tm = cari_titik(xml, "Tempel") or cari_titik(xml, "Paste")
+            if tm:
+                self.klien.klik(*tm)
+                cara = "fokus+tekan-lama+menu"
+            else:
+                raise MisiGagal("TEMPEL: menu Tempel/Paste tidak muncul dan chip clipboard tidak terlihat")
         time.sleep(0.5)
         probe = teks.split(" ")[0]
         if probe not in self.dump(paksa=True):
@@ -270,6 +302,8 @@ class Runner:
             try:
                 if cmd == "BUKA":
                     self.buka(sisa); ket = sisa
+                elif cmd == "TAUTAN":
+                    self.tautan(sisa); ket = sisa
                 elif cmd == "TUNGGU_TEKS":
                     bagian = sisa.rsplit(None, 1)
                     if len(bagian) == 2 and bagian[1].isdigit():
@@ -293,12 +327,24 @@ class Runner:
                     xml = self.dump(); self.klien.geser(a[0], a[1], a[2], a[3], ms); self.tunggu_berubah(xml)
                     ket = sisa
                 elif cmd == "KETIK":
-                    # Mode server: belum ada setText terbukti di u2 — pakai
-                    # jalur TEMPEL (clipboard) yang terverifikasi. Mode
-                    # jembatan: input text via rish seperti eksekutor lama.
+                    # Mode server: urutan strategi per bukti perangkat —
+                    # (1) input text via rish ke kolom yang sedang fokus
+                    #     (terbukti di kolom pencarian Glints, 8 Okt pagi;
+                    #     menu tempel & chip clipboard justru tidak muncul
+                    #     di kolom itu), diverifikasi dari dump;
+                    # (2) jalur TEMPEL (clipboard) sebagai cadangan umum.
+                    # Mode jembatan: input text via rish seperti eksekutor lama.
                     if self.mode == "server":
-                        cara = self.tempel(sisa.strip('"'))
-                        ket = "(%d karakter via tempel-server: %s)" % (len(sisa.strip('"')), cara)
+                        teks_bersih = sisa.strip('"')
+                        try:
+                            rish('input text "%s"' % teks_bersih.replace(" ", "%s"))
+                            time.sleep(0.5)
+                            if teks_bersih.split(" ")[0] not in self.dump(paksa=True):
+                                raise IOError("input-text tidak terbukti tampil di layar")
+                            ket = "(%d karakter via rish input-text, terverifikasi)" % len(teks_bersih)
+                        except Exception:
+                            cara = self.tempel(teks_bersih)
+                            ket = "(%d karakter via tempel-server: %s)" % (len(teks_bersih), cara)
                     else:
                         self.wajib_target("KETIK")
                         rish('input text "%s"' % sisa.strip('"').replace(" ", "%s"))

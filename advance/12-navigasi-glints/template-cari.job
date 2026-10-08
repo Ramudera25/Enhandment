@@ -1,0 +1,17 @@
+# Misi navigasi Glints — jalur PENCARIAN perusahaan (cadangan bila link masih
+# berbentuk explore / halaman perusahaan, yang TIDAK diklaim aplikasi).
+# Dihasilkan buat-misi.py — jangan edit tangan; ubah lewat generator.
+# Prasyarat: aplikasi Glints baru diluncurkan ulang (force-stop + start) oleh
+# pemanggil, supaya tumpukan navigasi bersih dari beranda.
+# Misi BERHENTI di halaman hasil pencarian yang memuat kartu perusahaan.
+# Ketuk kartu perusahaan + kartu listing dilakukan agen (geometri hasil
+# pencarian bervariasi), lalu verifikasi & LAMAR oleh agen.
+TARGET com.glints.candidate
+BUKA com.glints.candidate/.MainActivity
+TUNGGU_TEKS "Lowongan" 20
+KETUK 979 160
+JEDA 1
+KETIK "{{PERUSAHAAN_CARI}}"
+TUNGGU_TEKS "{{PERUSAHAAN_TAMPIL}}" 15
+KETUK_TEKS "{{PERUSAHAAN_TAMPIL}}"
+TUNGGU_TEKS "{{PERUSAHAAN_TAMPIL}}" 20

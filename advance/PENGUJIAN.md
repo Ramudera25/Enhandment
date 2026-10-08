@@ -294,3 +294,51 @@ menjelaskan lambatnya misi lama di langkah TUNGGU. Sesi diawali ketiga
 kaki kendali mati bersamaan; pemulihan: Shizuku Start oleh pemilik →
 rish hidup → server residen start ulang (mulai-server.sh, hidup pada
 percobaan cek pertama) → seluruh papan hijau sebelum benchmark.
+
+**Fase 12 — misi navigasi Glints + direktif TAUTAN: LULUS (8 Okt siang).**
+Latar: eksekusi manual 2 item antrean HP pagi itu memakan waktu dinding
+15 menit; analisisnya menunjukkan biaya terbesar adalah ritme
+amati→bertindak jarak jauh agen (SSH + screenshot + baca, 15–25 dtk per
+langkah), bukan HP-nya. Paket ini memindahkan segmen navigasi yang
+deterministik ke misi `misi-cepat` di dalam HP (advance/12).
+(1) **Direktif `TAUTAN <url>`** ditambahkan ke misi-cepat (intent VIEW via
+shim am, cadangan rish; tunggu paket TARGET tampil). Uji dispatch dengan
+`https://glints.com/id`: terbuka di **browser** dalam 5,3 dtk — membuktikan
+klaim aplikasi bersifat per-jalur URL: yang diklaim aplikasi hanya
+`/opportunities/jobs/...` (bukti langsung 7 Okt), domain akar & explore
+tidak. Konsekuensi desain: misi tautan tidak mengetuk apa pun sesudah
+TAUTAN, dan agen WAJIB memastikan paket depan = `com.glints.candidate`
+sebelum melanjutkan (CEK_TEKS memeriksa teks, bukan paket).
+(2) **Misi pencarian** (generator `buat-misi.py`, template-cari) ke
+PT. Ungaran Sari Garments — putaran pertama **GAGAL di langkah KETIK**:
+menu tempel tekan-lama tidak muncul di kolom pencarian Glints, dan chip
+clipboard keyboard tidak tampil di dump pada konteks itu. Perbaikan
+berbasis bukti (bukan tebakan): KETIK mode server kini mencoba
+(1) `input text` via rish ke kolom yang sedang fokus — jalur yang terbukti
+di kolom ini pada eksekusi manual pagi yang sama — diverifikasi dari dump,
+lalu (2) TEMPEL sebagai cadangan; TEMPEL sendiri kini mencoba chip
+clipboard keyboard lebih dulu, menu tekan-lama sesudahnya. Putaran kedua
+**LULUS PENUH**: 8 langkah, total **12,58 dtk** (BUKA 3,67; TUNGGU
+"Lowongan" 0,17; KETUK ikon cari 0,55; KETIK 5,73 terverifikasi; TUNGGU
+saran perusahaan 0,60; KETUK_TEKS saran 0,60; TUNGGU hasil 0,26). Perjalanan
+yang sama secara interaktif pagi itu memakan ±4–5 menit pulang-pergi.
+
+**Fase 13 — penjaga kaki residen: LULUS (8 Okt siang).** Loop Bash 60 detik
+di HP (advance/13): ping HTTP `/ping` untuk server residen u2, probe
+`rish -c id`, cek TCP aplikasi pendamping — sengaja TANPA dump UI
+(pelajaran Fase 6). Tiga hasil uji: (1) **Siklus pertama menembak notifikasi
+PALSU** — probe rish tunggal kebetulan kena timeout binder sesaat (denyut
+Shizuku yang sudah dikenal); rish terbukti hidup beberapa detik kemudian.
+Obat permanen yang langsung diterapkan & terpasang: kematian hanya
+dinyatakan setelah DUA probe gagal berurutan dengan jeda 10 detik
+(deteksi tetap ≤ ±90 detik). (2) **Uji bunuh server residen**:
+`mulai-server.sh --berhenti` pukul 12.05.39 → penjaga mendeteksi
+12.06.42 → menjalankan mulai-server.sh → ping menjawab "pong" 12.07.10 —
+**pulih ±91 detik tanpa manusia**. (3) **Uji jalur notifikasi** terisolasi
+(`PENJAGA_RISH_CMD=false`, direktori keadaan terpisah): status tercatat
+mati + tepat **1 notifikasi** terkirim; kontrol probe sehat: status ok +
+**0 notifikasi**. Kait hidup-kembali: `mulai-server.sh` kini memastikan
+penjaga berjalan setiap kali ia dipanggil, sehingga jalur pemulihan yang
+sudah dikenal pemilik sekaligus menghidupkan penjaganya. Batasan tetap
+jujur: Shizuku tidak bisa dihidupkan skrip — penjaga hanya membuat
+kematiannya terdeteksi ±1 menit dan server residen tidak ikut mati lama.

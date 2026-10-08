@@ -1,0 +1,8 @@
+# Misi navigasi Glints — jalur DEEP LINK (URL detail lowongan /opportunities/jobs/...).
+# Dihasilkan buat-misi.py — jangan edit tangan; ubah lewat generator.
+# Misi BERHENTI di halaman detail lowongan. Verifikasi kesegaran (banner tutup),
+# kecocokan posisi/lokasi/gaji, dan LAMAR dilakukan agen — bukan misi ini.
+TARGET com.glints.candidate
+TAUTAN {{URL}}
+TUNGGU_TEKS "{{POSISI}}" 30
+CEK_TEKS "{{POSISI}}"
