@@ -21,6 +21,14 @@
 //                     balasan menunggu versi salinan NAIK (verifikasi
 //                     bawaan, batas 1,2 dtk) sebelum dikirim)
 //   GLOBAL BACK|HOME|RECENTS -> sama (performGlobalAction)
+//   BINGKAI       -> baris JSON {"ok":bool,"sumber":"segar|buffer|buffer-throttle",
+//                     "versi_bingkai":N,"umur_bingkai_ms":N,"byte":N} DIIKUTI
+//                     N byte PNG mentah pada koneksi yang sama (V4.3 "Mata":
+//                     takeScreenshot layanan, API 30+; throttle +-1,1 dtk —
+//                     panggilan terlalu rapat dilayani dari buffer)
+//   AMBIL         -> sama, tapi selalu dari buffer tangkapan terakhir
+//                     (buffer terisi oleh BINGKAI atau tangkap otomatis
+//                     saat paket depan berganti aplikasi)
 //   TOMBOL <kode>  -> {"ok":bool,"kode":N,"versi_sblm":N,"versi_ssdh":N,
 //                     "naik":bool,"latensi_ms":N[, "sebab":"..."]}
 //                     V4.2: 224 (WAKEUP) via wakelock ACQUIRE_CAUSES_WAKEUP
@@ -39,6 +47,10 @@ import android.accessibilityservice.AccessibilityServiceInfo
 import android.accessibilityservice.GestureDescription
 import android.graphics.Path
 import android.graphics.Rect
+import android.graphics.Bitmap
+import android.os.Build
+import android.view.Display
+import java.io.ByteArrayOutputStream
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -74,6 +86,11 @@ object PohonUI {
 
     fun umurMs(): Long =
         if (stempelMs == 0L) -1 else SystemClock.uptimeMillis() - stempelMs
+    // V4.3 "Mata": bingkai PNG terakhir + versi pohon & waktu tangkapnya.
+    @Volatile var bingkaiPng: ByteArray? = null
+    @Volatile var bingkaiVersi: Long = -1
+    @Volatile var bingkaiStempelMs: Long = 0
+    @Volatile var tangkapTerakhirMs: Long = 0
 }
 
 class LayananAkses : AccessibilityService() {
@@ -167,6 +184,21 @@ class LayananAkses : AccessibilityService() {
         PohonUI.paketDepan = akar.packageName?.toString() ?: ""
         PohonUI.stempelMs = SystemClock.uptimeMillis()
         PohonUI.versi++
+        val paketBaru = akar.packageName?.toString() ?: ""
+        val paketLama = PohonUI.paketDepan
+        PohonUI.simpul = hasil
+        PohonUI.paketDepan = paketBaru
+        PohonUI.stempelMs = SystemClock.uptimeMillis()
+        PohonUI.versi++
+        // V4.3: tangkap terpicu kejadian — jendela berpindah aplikasi =
+        // lompatan besar; ambil satu bingkai tertunda 400 ms (layar sempat
+        // stabil) di utas latar (bingkai() menunggu gerbang; jangan di utas
+        // utama yang juga mengantar callback tangkapan).
+        if (paketLama.isNotEmpty() && paketBaru.isNotEmpty() && paketBaru != paketLama) {
+            penangan.postDelayed({
+                thread { try { bingkai(true) } catch (e: Exception) { } }
+            }, 400)
+        }
     }
 
     // ---- aksi set-text pada node HIDUP (bukan salinan) ----
@@ -348,7 +380,79 @@ class LayananAkses : AccessibilityService() {
         return out
     }
 
-    // ---- penyaji socket 19102 ----
+    // ---- penyaji socket 19102 ----    // ---- mata (V4.3): tangkap layar layanan aksesibilitas ----
+    // AccessibilityService.takeScreenshot (API 30+) — tanpa izin
+    // MediaProjection per sesi; yang ditolak sistem (jendela aman
+    // FLAG_SECURE, layar mati) dilaporkan jujur lewat kode galat.
+
+    data class HasilBingkai(val json: JSONObject, val png: ByteArray?)
+
+    fun bingkai(segar: Boolean): HasilBingkai {
+        val out = JSONObject()
+        val buf = PohonUI.bingkaiPng
+        val umurBuf = if (PohonUI.bingkaiStempelMs == 0L) -1
+            else SystemClock.uptimeMillis() - PohonUI.bingkaiStempelMs
+        if (!segar && buf != null) {
+            return HasilBingkai(out.put("ok", true).put("sumber", "buffer")
+                .put("versi_bingkai", PohonUI.bingkaiVersi)
+                .put("umur_bingkai_ms", umurBuf).put("byte", buf.size), buf)
+        }
+        if (instans == null) return HasilBingkai(
+            out.put("ok", false).put("sebab", "layanan tidak aktif"), null)
+        val sejak = SystemClock.uptimeMillis() - PohonUI.tangkapTerakhirMs
+        if (buf != null && sejak < 1100) {
+            return HasilBingkai(out.put("ok", true).put("sumber", "buffer-throttle")
+                .put("versi_bingkai", PohonUI.bingkaiVersi)
+                .put("umur_bingkai_ms", umurBuf).put("byte", buf.size), buf)
+        }
+        if (Build.VERSION.SDK_INT < 30) return HasilBingkai(
+            out.put("ok", false).put("sebab", "takeScreenshot butuh Android 11+"), null)
+        val gerbang = CountDownLatch(1)
+        var png: ByteArray? = null
+        var galat = -1
+        PohonUI.tangkapTerakhirMs = SystemClock.uptimeMillis()
+        try {
+            takeScreenshot(Display.DEFAULT_DISPLAY, mainExecutor,
+                object : TakeScreenshotCallback {
+                    override fun onSuccess(hasil: ScreenshotResult) {
+                        try {
+                            val bmp = Bitmap.wrapHardwareBuffer(
+                                hasil.hardwareBuffer, hasil.colorSpace)
+                            if (bmp != null) {
+                                val salinan = bmp.copy(Bitmap.Config.ARGB_8888, false)
+                                bmp.recycle()
+                                val bos = ByteArrayOutputStream()
+                                salinan.compress(Bitmap.CompressFormat.PNG, 100, bos)
+                                salinan.recycle()
+                                png = bos.toByteArray()
+                            }
+                        } catch (e: Exception) { }
+                        try { hasil.hardwareBuffer.close() } catch (e: Exception) { }
+                        gerbang.countDown()
+                    }
+                    override fun onFailure(kodeGalat: Int) {
+                        galat = kodeGalat
+                        gerbang.countDown()
+                    }
+                })
+        } catch (e: Exception) {
+            return HasilBingkai(out.put("ok", false)
+                .put("sebab", "takeScreenshot melempar: " + e.message), null)
+        }
+        gerbang.await(4, TimeUnit.SECONDS)
+        val hasilPng = png
+        if (hasilPng == null) return HasilBingkai(out.put("ok", false)
+            .put("sebab", if (galat >= 0) "takeScreenshot gagal, kode " + galat
+                else "timeout tangkapan (4 dtk)"), null)
+        PohonUI.bingkaiPng = hasilPng
+        PohonUI.bingkaiVersi = PohonUI.versi
+        PohonUI.bingkaiStempelMs = SystemClock.uptimeMillis()
+        return HasilBingkai(out.put("ok", true).put("sumber", "segar")
+            .put("versi_bingkai", PohonUI.bingkaiVersi)
+            .put("umur_bingkai_ms", 0).put("byte", hasilPng.size), hasilPng)
+    }
+
+
 
     private fun penyaji() {
         try {
@@ -361,7 +465,26 @@ class LayananAkses : AccessibilityService() {
                                 InputStreamReader(it.getInputStream(), Charsets.UTF_8))
                             val keluar = PrintWriter(it.getOutputStream(), true)
                             val perintah = masuk.readLine() ?: return@thread
-                            keluar.println(jawab(perintah))
+                            val kataAwal = perintah.substringBefore(' ').trim().uppercase()
+                            if (kataAwal == "BINGKAI" || kataAwal == "AMBIL") {
+                                val lay = instans
+                                if (lay == null) {
+                                    keluar.println(JSONObject().put("ok", false)
+                                        .put("sebab", "layanan tidak aktif").toString())
+                                } else {
+                                    val hasil = lay.bingkai(kataAwal == "BINGKAI")
+                                    keluar.println(hasil.json.toString())
+                                    keluar.flush()
+                                    val png = hasil.png
+                                    if (hasil.json.optBoolean("ok") && png != null) {
+                                        val os = it.getOutputStream()
+                                        os.write(png)
+                                        os.flush()
+                                    }
+                                }
+                            } else {
+                                keluar.println(jawab(perintah))
+                            }
                         }
                     }
                 }

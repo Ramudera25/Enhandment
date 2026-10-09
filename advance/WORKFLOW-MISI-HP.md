@@ -162,3 +162,28 @@ perbedaan dengan catatan mana pun yang lebih lama, ikuti bagian ini.
   (ok=true); 20x PING di bawah beban POHON: median 9 ms, maks
   11 ms, 0 timeout; runner A1 aman — misi gagal TIDAK membunuh
   pohon lagi dan berkas .hasil selalu tertulis.
+
+## Addendum V4.3 "Mata" (9 Okt 2026, bayu): prosedur LIHAT
+
+- Perintah baru di 19102: BINGKAI (tangkap segar) dan AMBIL
+  (buffer terakhir). Keduanya membalas baris JSON header lalu byte
+  PNG mentah; klien siap pakai: advance/15-pohon-ui-aksesibilitas/
+  ambil-bingkai.py (jalankan di HP, bingkai tersimpan sebagai PNG).
+- Prosedur LIHAT fase 1: (1) jalankan ambil-bingkai.py BINGKAI;
+  (2) tarik PNG-nya ke agen dan baca isinya; (3) untuk mengetuk
+  target hasil bacaan, sandingkan dulu dengan pohon/CARI — yang
+  cocok simpul pohon diketuk lewat pohon; yang hanya ada di gambar
+  diketuk dari koordinat hasil bacaan dan hasilnya diverifikasi
+  dari bingkai/pohon sesudahnya; (4) catat di berkas hasil mana
+  langkah berbasis pohon dan mana berbasis gambar.
+- Hormati header: "sumber":"buffer"/"buffer-throttle" berarti
+  bingkai BUKAN segar — nilai umur_bingkai_ms sebelum memakai.
+- Tangkap otomatis mengisi buffer saat paket depan berganti
+  aplikasi; AMBIL sesudah navigasi besar biasanya sudah berisi
+  bingkai baru tanpa BINGKAI eksplisit.
+- Jendela aman (FLAG_SECURE, mis. perbankan) akan menolak
+  takeScreenshot — layanan melapor gagal dengan kode; itu batas
+  sah, bukan untuk diakali.
+- Penanda tangan APK kanonis proyek = debug.keystore di
+  ~/workspace/musedroid-app (lihat PENGUJIAN.md V4.3); build
+  dengan kunci lain membuat upgrade berikutnya ditolak sistem.

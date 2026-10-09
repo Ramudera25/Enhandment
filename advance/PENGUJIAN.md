@@ -709,3 +709,51 @@ mekanisme yang diuji. Pelajaran permanen: misi uji ketahanan harus
 memakai target yang kebal perubahan tata letak dan memverifikasi
 keadaan fitur (Wi-Fi on/off) sebagai prasyarat — masuk desain V5
 (gerbang prasyarat). Tag V4.2 dipasang dengan catatan ini terbuka.
+
+## V4.3 "Mata" — 9 Okt 2026 sore (bayu): BINGKAI/AMBIL di server pohon
+
+Kemampuan baru di LayananAkses (socket 19102), dibangun & diuji
+langsung oleh bayu di perangkat pada hari yang sama:
+- BINGKAI: tangkap layar via AccessibilityService.takeScreenshot
+  (API 30+; atribut canTakeScreenshot ditambahkan ke
+  res/xml/layanan_akses.xml). Balasan: baris JSON header lalu byte
+  PNG mentah pada koneksi yang sama. Throttle +-1,1 dtk dihormati —
+  panggilan terlalu rapat dilayani dari buffer, dilabeli jujur
+  ("sumber":"buffer-throttle").
+- AMBIL: bingkai buffer terakhir (terisi oleh BINGKAI atau tangkap
+  otomatis saat paket depan berganti aplikasi, tertunda 400 ms).
+- Klien: advance/15-pohon-ui-aksesibilitas/ambil-bingkai.py.
+
+Hasil uji (9 Okt 13:49-13:52):
+- BINGKAI segar: LULUS. {"ok":true,"sumber":"segar",
+  "versi_bingkai":3326,"byte":336046} — PNG terbaca utuh; isinya
+  layar aplikasi Muse di HP pemilik (sedang dipakai mengobrol),
+  teks tajam terbaca agen. Inilah jalur LIHAT fase 1: bingkai ->
+  agen membaca -> koordinat disandingkan pohon/CARI.
+- AMBIL: LULUS. sumber=buffer, byte identik 336046, umur bingkai
+  dilaporkan membesar jujur (34 -> 79 dtk pada dua panggilan).
+- Regresi: PING pohon pong (versi bergerak), pendamping 19101 PONG.
+- Tangkap otomatis terpicu ganti paket: kode terpasang, BELUM
+  teramati menyala (pemilik memakai HP di satu aplikasi selama
+  jendela uji; penjaga target melarang merebut layar). Menunggu
+  pengamatan pada jendela HP bebas.
+- LIHAT di permukaan buta (Facebook/Litho): BELUM diuji — alasan
+  sama (HP sedang di tangan pemilik). Prosedur siap di
+  WORKFLOW-MISI-HP.md addendum V4.3.
+- OCR di dalam perangkat: fase 2, belum dibangun (pembaca fase 1
+  adalah agen lewat bingkai).
+
+Pelajaran pemasangan V4.3 (penting, jangan ulangi):
+- Upgrade -r DITOLAK (INSTALL_FAILED_UPDATE_INCOMPATIBLE): APK
+  V4.2 di perangkat ditandatangani kunci toolchain bangun-ulang
+  Hermes, BUKAN kunci proyek. Sejak V4.3 penanda tangan kanonis =
+  debug.keystore proyek di ~/workspace/musedroid-app (signer
+  SHA-256 4bd4d8b9...); semua build berikutnya WAJIB kunci itu.
+- Jalan keluar yang terbukti: uninstall -> install bersih ->
+  settings tulis ulang -> MainActivity -> dialog persetujuan
+  kontrol penuh "Allow" WAJIB diketuk PEMILIK (pemasangan bersih
+  memicunya; penulisan setting tidak menggantikannya) -> layanan
+  terikat dan bertahan.
+- APK V4.3: 2.380.244 byte, sha256
+  25a7f5d681c03c106b7365e8f5fbf77d5987c12fefc54bb1c16ef2cffbf3a937,
+  versionCode 43 / versionName 4.3.
