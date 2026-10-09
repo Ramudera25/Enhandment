@@ -550,9 +550,11 @@ class Runner:
             # Aturan §4: guard dari salinan dikonfirmasi dump pada
             # langkah buta pertama misi ini.
             self.buta_pertama = False
-            if self.mode == "pohon" and self.u2_hidup:
+            # Patch A1: konfirmasi langkah buta dari pohon (PAKET?), BUKAN
+            # dump uiautomator yang melepas ikatan.
+            if self.mode == "pohon":
                 try:
-                    return 'package="%s"' % self.target in self.dump(paksa=True)
+                    return self.paket_depan() == self.target
                 except Exception:
                     return False
         return True
@@ -592,7 +594,11 @@ class Runner:
         # resolve-activity lewat rish (shell uid=2000 punya `cmd package`);
         # keluaran --brief: baris terakhir berbentuk "paket/.Activity".
         komponen = None
-        keluar = rish("cmd package resolve-activity --brief %s" % paket)
+        # Patch A1: resolve via shell Termux (cmd) — tanpa jalur rish.
+        keluar = subprocess.run(["cmd", "package", "resolve-activity",
+                                 "--brief", paket],
+                                capture_output=True, text=True,
+                                timeout=20).stdout
         for baris in reversed((keluar or "").splitlines()):
             baris = baris.strip()
             if "/" in baris and " " not in baris:
@@ -644,7 +650,7 @@ class Runner:
         self.sebelum_tindakan()
         r = subprocess.run(["am", "start", "-a", "android.intent.action.VIEW",
                             "-d", url], capture_output=True, text=True, timeout=20)
-        if r.returncode != 0:
+        if r.returncode != 0 and self.mode != "pohon":
             rish('am start -a android.intent.action.VIEW -d "%s"' % url)
         if self.target:
             self._tunggu_paket(self.target)
@@ -669,19 +675,19 @@ class Runner:
                         return time.time() - t0
                 if self.gerbang_versi is not None and \
                         time.time() - cek_dump_terakhir > BATAS_UBAH:
-                    # Versi macet: dump cadangan yang memutuskan (§4).
+                    # Patch A1: versi macet TIDAK memicu dump — tetap
+                    # poll pohon sampai timeout (keputusan hanya dari pohon).
                     cek_dump_terakhir = time.time()
-                    try:
-                        if teks in self.dump(paksa=True):
-                            self.gerbang_versi = None
-                            self.catat("INFO", 'TUNGGU_TEKS "%s": terbukti via '
-                                               'dump (versi pohon macet)' % teks)
-                            return time.time() - t0
-                    except Exception:
-                        pass
+                    self.catat("INFO", 'TUNGGU_TEKS "%s": versi pohon macet '
+                                       '%.1f dtk — lanjut poll pohon (A1)'
+                               % (teks, BATAS_UBAH))
                 if time.time() - t0 >= timeout:
                     raise MisiGagal('TUNGGU_TEKS "%s" timeout %sd' % (teks, timeout))
                 time.sleep(POLL_TUNGGU)
+        # Patch A1: mode pohon tidak jatuh ke loop dump — berhenti jujur.
+        if self.mode == "pohon":
+            raise MisiGagal('TUNGGU_TEKS "%s": pohon tidak menjawab — A1: '
+                            'tanpa jalur dump di mode pohon' % teks)
         jeda = POLL_TUNGGU if self.mode == "dump" else POLL_TUNGGU_JEMBATAN
         while True:
             if teks in self.dump(paksa=True):
@@ -814,6 +820,10 @@ class Runner:
         nodes = self.node_semua()
         kolom = next((n for n in nodes if n["edit"] and n["titik"]), None)
         if not kolom:
+            # Patch A1: mode pohon tidak membuka dump untuk mencari kolom.
+            if self.mode == "pohon":
+                raise MisiGagal("TEMPEL: kolom teks tidak terlihat di pohon "
+                                "— A1: tanpa jalur dump di mode pohon")
             titik = kolom_teks(self.dump(paksa=True))
             if not titik:
                 raise MisiGagal("TEMPEL: kolom teks tidak ditemukan")
