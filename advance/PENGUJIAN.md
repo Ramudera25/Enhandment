@@ -757,3 +757,20 @@ Pelajaran pemasangan V4.3 (penting, jangan ulangi):
 - APK V4.3: 2.380.244 byte, sha256
   25a7f5d681c03c106b7365e8f5fbf77d5987c12fefc54bb1c16ef2cffbf3a937,
   versionCode 43 / versionName 4.3.
+
+## Addendum LIHAT — 9 Okt 13:55-13:58 (bayu): uji Facebook tuntas
+
+Atas perintah pemilik, prosedur LIHAT dijalankan ke Facebook:
+- Facebook dibuka murni lewat pohon (laci Samsung: GLOBAL HOME ->
+  GESER -> cari -> KETUK ikon) karena Shizuku sedang mati — jalur
+  cadangan pohon penuh bekerja.
+- Layar sempat mati di tengah jalan; TOMBOL 224 membangunkan dan
+  Facebook kembali ke depan (terverifikasi bingkai).
+- Daftar Chats dibaca dari bingkai (BINGKAI segar 5x): pengirim +
+  cuplikan terbaca jelas, termasuk saringan Unread dan satu gulir.
+  Vonis: LIHAT fase 1 LULUS di permukaan Facebook.
+- Tangkap otomatis terpicu ganti paket: MASIH belum teramati —
+  buffer tidak berubah saat berpindah Brave -> peluncur ->
+  Facebook (dugaan: tangkapan saat transisi gagal diam-diam;
+  perlu logging galat di jalur otomatis — pekerjaan lanjutan,
+  bukan penahan rilis).
