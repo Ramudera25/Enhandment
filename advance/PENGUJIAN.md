@@ -635,3 +635,40 @@ Kode V4.2 (manifest --version-code 42 --version-name 4.2) terbuild
 (2.396.628 byte; sha256 APK pertama 8a0fe843..., final e3e5e327...).
 Tag V4.2 BELUM dipasang sesuai aturan proyek: B3 belum teruji terukur,
 reinstall final tertunda.
+
+## Addendum verifikasi 9 Okt 2026 (bayu) — pemasangan V4.2 + uji lanjutan
+
+Dilakukan langsung oleh bayu sesudah sesi Hermes, atas perintah
+Travis. Prosedur lengkap: WORKFLOW-MISI-HP.md addendum 9 Okt.
+
+- INSTALL V4.2: SELESAI. v42f.apk sha256 e3e5e327... (sama dengan
+  build final Hermes) terpasang ("Success", pm path terverifikasi);
+  settings aksesibilitas ditulis ulang; ikatan pohon terjadi lewat
+  satu siklus saklar UI; 19101 PONG hidup; penjaga memantau
+  (pohon=ok, u2 ditahan mati sesuai eksklusivitas).
+- B2 TOMBOL: LULUS terverifikasi bayu. Layar dimatikan (keyevent 26
+  via rish), lalu TOMBOL 224 via socket 19102 membalas
+  {"ok":true,"kode":224,"versi_sblm":25,"versi_ssdh":26,
+  "naik":true,"latensi_ms":1119} dan dumpsys power menunjukkan
+  mWakefulness=Awake.
+- B3 PING: LULUS terverifikasi bayu. 20x PING sambil POHON besar
+  diminta terus-menerus: median 9 ms, maks 11 ms, 0 timeout.
+  Desain thread-per-koneksi terbukti.
+- A1 keamanan: LULUS. Tiga run misi-uji-standar dengan runner baru:
+  pohon SELAMAT di ketiganya (PING menjawab sesudah run, versi
+  bergerak) dan berkas .hasil tertulis di ketiganya (A3 terpenuhi
+  juga untuk run gagal).
+- A2/BUKA: angka Hermes SAH — BUKA 3.936 ms (Settings hangat) dan
+  5.361 ms (Settings dingin) terukur oleh bayu.
+- Misi-uji-standar: langkah 1-5 LULUS dalam ±7 detik total
+  (TUNGGU_TEKS 5 ms, KETUK_TEKS 699 ms, TUNGGU "Network name"
+  721 ms) — angka "17 -> 7 detik" Hermes tereproduksi.
+  Langkah 6 TEMPEL: GAGAL definitif (lihat WORKFLOW addendum:
+  toolbar tidak pernah muncul; ISI terverifikasi sebagai padanan).
+  Status 9/9: tertahan BUKAN oleh runner, melainkan spesifikasi
+  langkah 6 — menunggu keputusan mengganti TEMPEL -> ISI.
+- Temuan jebakan BUKA (paket vs halaman) + beku salinan sesudah
+  layar mati: terdokumentasi di WORKFLOW-MISI-HP.md addendum 9 Okt.
+- B1 (uji misi 5 menit sesudah layar dimatikan): BELUM diuji bayu.
+- B5: prasyarat teruji kini terpenuhi kecuali B1; penentuan tag
+  V4.2 menunggu B1 atau keputusan pemilik.

@@ -99,3 +99,66 @@ TOMBOL <kode> → {"ok","kode","versi_sblm","versi_ssdh","naik","latensi_ms"}.
 224=wakeup (wakelock), 3=HOME/4=BACK (aksi global), lainnya ditolak jujur.
 Runner misi-ad-hoc (A1) mode pohon TIDAK lagi menjatuhkan dump/u2/rish —
 pohon satu-satunya tangan; gagal = berhenti jujur (grep "A1:" di kode).
+
+## Addendum 9 Okt 2026 (bayu): install V4.2 terverifikasi + temuan lapangan
+
+Bagian ini ditulis dari sesi perbaikan yang dijalankan dan diukur
+langsung oleh bayu pada 9 Okt 2026 (12.19-12.30 WIB). Bila ada
+perbedaan dengan catatan mana pun yang lebih lama, ikuti bagian ini.
+
+### Install ulang pendamping — urutan yang terbukti di sesi ini
+1. APK final (v42f.apk, 2.396.628 byte, sha256
+   e3e5e32784b8091ce5faae4ac3edd05ea070f8517fdc6d181d2a2cbe14b2a78f)
+   ditempatkan dulu di /sdcard/Download/ (Termux/scp bisa menulis ke
+   sana), lalu dari shell Shizuku/rish disalin ke /data/local/tmp/.
+   CATATAN KERAS: shell TIDAK bisa membaca direktori privat Termux
+   (/data/data/com.termux/files/home/...) — menyalin langsung dari
+   sana GAGAL (terbukti di sesi ini). Selalu lewat /sdcard/Download.
+2. `pm install /data/local/tmp/v42f.apk` dari shell — keluaran
+   ditulis ke berkas lalu dibaca kembali via SSH; hasil terverifikasi
+   "Success" + `pm path id.musedroid.pendamping` mengembalikan path.
+   Jangan percaya keluaran rish seketika (bisa tertinggal); verifikasi
+   efeknya selalu lewat berkas/jalur kedua.
+3. Sesudah uninstall, setting aksesibilitas ikut terhapus. Tulis
+   ulang dari shell: `settings put secure
+   enabled_accessibility_services
+   id.musedroid.pendamping/id.musedroid.pendamping.LayananAkses` dan
+   `settings put secure accessibility_enabled 1`, lalu baca balik
+   dengan `settings get` untuk memastikan.
+4. Jalankan `am start -n id.musedroid.pendamping/.MainActivity`.
+   Socket pendamping 19101 menjawab PONG sendiri sesudahnya.
+5. Ikatan pohon (19102) TIDAK terjadi hanya dari settings: buka
+   Pengaturan Aksesibilitas > Installed apps > muse-droid Pohon UI,
+   lakukan satu siklus saklar UI (matikan, konfirmasi, nyalakan).
+   Di sesi ini pohon terikat ±35 detik sesudah saklar dinyalakan
+   (PING menjawab {"pong":true,...}). Sesudah terikat, probe:
+   PING 19102, PING 19101, TOMBOL 224, status penjaga.
+
+### Temuan lapangan (semua terukur di sesi ini)
+- JEBAKAN BUKA: langkah BUKA runner memverifikasi paket teratas,
+  BUKAN halaman. Bila aplikasi target sudah terbuka di halaman lain
+  (mis. Settings tertinggal di halaman Aksesibilitas), intent BUKA
+  tertelan tumpukan lama dan halaman tujuan tidak pernah tampil —
+  TUNGGU_TEKS lalu timeout pada teks yang memang tidak ada di layar.
+  Inilah akar gagal langkah-2 yang berulang. Prakondisi sebelum
+  misi/uji: dinginkan aplikasi target (force-stop), atau verifikasi
+  halaman dari isi pohon, jangan dari paket saja.
+- TEMPEL pada formulir "Add network" Pengaturan Samsung: toolbar
+  tempel TIDAK PERNAH muncul — kolom kosong maupun sudah terisi,
+  tekan-lama native pohon + tunggu 4 detik. Jalur menu tempel/chip
+  clipboard dinyatakan mati untuk formulir ini; jangan buktikan
+  ulang. Padanan fungsional: ISI pohon (ketik langsung ke kolom
+  fokus) — terverifikasi bekerja di formulir yang sama.
+  Konsekuensi: langkah 6 misi-uji-standar tidak akan pernah lulus
+  sebagaimana tertulis; rekomendasi: spesifikasi langkah 6 diganti
+  TEMPEL -> ISI.
+- Salinan pohon bisa BEKU sesudah episode layar mati (versi diam,
+  umur membesar, socket tetap menjawab PING). Satu GLOBAL via pohon
+  melepas bekunya (versi langsung bergerak lagi). Sebelum misi,
+  selalu pastikan versi pohon BERGERAK, bukan hanya PING menjawab.
+- Angka terukur sesi ini (detail di PENGUJIAN.md, addendum 9 Okt):
+  BUKA misi 3.936-5.361 ms; langkah 1-5 misi-uji-standar tuntas
+  ±7 detik; TOMBOL 224 membangunkan layar mati lewat socket
+  (ok=true); 20x PING di bawah beban POHON: median 9 ms, maks
+  11 ms, 0 timeout; runner A1 aman — misi gagal TIDAK membunuh
+  pohon lagi dan berkas .hasil selalu tertulis.
