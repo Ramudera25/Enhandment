@@ -672,3 +672,40 @@ Travis. Prosedur lengkap: WORKFLOW-MISI-HP.md addendum 9 Okt.
 - B1 (uji misi 5 menit sesudah layar dimatikan): BELUM diuji bayu.
 - B5: prasyarat teruji kini terpenuhi kecuali B1; penentuan tag
   V4.2 menunggu B1 atau keputusan pemilik.
+
+## Addendum B1 — 9 Okt 2026 siang (bayu): mekanisme lulus, bentuk uji misi belum
+
+Tiga percobaan uji B1 (misi uji-b1.job: BUKA Wi-Fi + TUNGGU "Add
+network" + 11 siklus JEDA/CEK, total ±5 menit), semuanya oleh bayu:
+
+1. 12:54 — layar dimatikan (keyevent 26 via rish) di tengah BUKA.
+   Misi gugur langkah 2 (timeout 30 dtk): jendela tunggu teks kalah
+   oleh peralihan jendela saat HP dozing. NAMUN sampel tiap 20 dtk
+   membuktikan mekanisme V4.2 bekerja: sesudah sempat Dozing, layar
+   bangun lagi SENDIRI dan bertahan Awake (kunci layar
+   'musedroid:layar'), dan versi pohon naik terus 1353 -> 1529
+   selama ±7 menit TANPA beku. dumpsys power: PARTIAL_WAKE_LOCK
+   'musedroid:jangkar' + SCREEN_BRIGHT 'musedroid:layar' ACQ oleh
+   LayananDepan (pid 12137), sesuai desain.
+2. 13:02 — percobaan ulang tercemar: Shizuku mati pukul 13:01:27
+   (penjaga mendeteksi + notifikasi terkirim 13:01:32), sehingga
+   prakondisi (force-stop Settings + matikan layar) tidak pernah
+   jalan. Misi tetap gugur langkah 2 — akar ditemukan sesudahnya:
+   **Wi-Fi HP dalam keadaan OFF** ("To see available networks,
+   turn on Wi-Fi"), baris "Add network" memang tidak ada. Misi
+   menunggu teks yang mustahil muncul.
+3. 13:09 — Wi-Fi dinyalakan lewat pohon, misi bersih tanpa
+   gangguan: langkah 1-7 OK, gugur langkah 8 — daftar jaringan
+   selesai memindai, baris "Add network" terdorong ke bawah
+   lipatan; CEK_TEKS satu-tembak (hanya simpul terlihat)
+   menyatakannya tidak tampil. Runner berhenti jujur (A1),
+   .hasil tertulis, pohon hidup sesudahnya.
+
+Vonis: mekanisme B1 (WakeLock + jaga layar) LULUS terverifikasi.
+Bentuk uji "satu misi 5 menit tuntas" BELUM lulus — tiga kegagalan
+semuanya oleh asumsi keadaan halaman pada misi ujinya (jendela
+dozing, Wi-Fi mati, tata letak daftar berubah), bukan oleh
+mekanisme yang diuji. Pelajaran permanen: misi uji ketahanan harus
+memakai target yang kebal perubahan tata letak dan memverifikasi
+keadaan fitur (Wi-Fi on/off) sebagai prasyarat — masuk desain V5
+(gerbang prasyarat). Tag V4.2 dipasang dengan catatan ini terbuka.
