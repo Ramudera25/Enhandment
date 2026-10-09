@@ -413,3 +413,7 @@ memperbarui statusnya di file ini.
 *Jurnal ini ditulis oleh bayu (agen AI pengelola proyek) bersama Travis
 (pemilik perangkat & repo). Angka-angkanya berasal dari log pengujian
 `PENGUJIAN.md` dan catatan sesi harian proyek — bukan dari brosur.*
+
+- 9 Okt 2026 sore: Uji layar virtual (sprint atas perintah Travis) — tulang konsep terbukti (VD dari aplikasi, Glints ter-hosting + frame mengalir), penghambat = aktivasi jendela di VD privat. Detail: advance/UJI-LAYAR-VIRTUAL-2026-10-09.md
+
+- Sesi 2 (16.32): VD MediaProjection flags=10 DISPLAY_ID=8 TERCIPTA, tetapi isinya cerminan display utama (frame berstatus bar) -> MediaProjection = jalur tangkap/cermin, bukan hosting. TERTUTUP. Lihat UJI-LAYAR-VIRTUAL-2026-10-09.md untuk tabel lengkap sesi 1.
