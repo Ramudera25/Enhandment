@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 # misi-cepat.py — Runner makro residen muse-droid (advance/11).
+# ERA u2 — JANGAN dipakai saat pohon terikat (A4, 9 Okt): runner ini bekerja
+# lewat server u2/uiautomator; dump-nya MELEPAS ikatan pohon (LayananAkses).
+# Untuk misi saat pohon terikat: pakai misi-ad-hoc.py (mode pohon).
 #
 # Penggabungan dua peningkatan dari roadmap LOG-PEMBAHARUAN.md §8:
 #   (1) Eksekusi makro penuh di perangkat: SATU proses Python yang tinggal
@@ -35,8 +38,19 @@ import sys
 import time
 
 HOST, PORT = "127.0.0.1", 9008
-POLL_TUNGGU = 0.25     # dtk — polling TUNGGU_TEKS mode server
-POLL_UBAH = 0.15       # dtk — polling "hierarki berubah" sesudah ketukan
+POLL_TUNGGU = 0.02     # dtk — polling TUNGGU_TEKS mode server (patch 9 Okt)
+POLL_UBAH = 0.02       # dtk — polling "hierarki berubah" sesudah ketukan (patch 9 Okt: RTT 2-3 ms)
+# PATCH LATENSI 9 Okt 2026 (uji terukur): RTT pohon 19102 = 2-3 ms, jadi poll
+# rapat nyaris gratis. POLL 0.15/0.25 -> 0.02 dtk; poll basi 0.1 -> 0.005 dtk;
+# jeda kecil fungsional 0.4/0.5/0.6 dtk -> 0.08 dtk (tetap ada untuk IME/render/
+# anti ketuk-ganda). Patch (2) 9 Okt: JEDA divalidasi + plafon 5 dtk;
+# tekan-lama pakai TAHAN (pohon) / longClick (u2) native, geser-800 = cadangan.
+# Patch (2) 9 Okt: plafon JEDA manual — permintaan tunggu perancang misi
+# dihormati sampai 5 dtk; dilampaui = dibatasi + dicatat (misi tidak
+# menggantung; pecah misi bila butuh lebih lama).
+JEDA_BATAS = 5.0         # dtk
+
+
 BATAS_UBAH = 1.2       # dtk — batas tunggu perubahan sesudah ketukan
 NODE_RE = re.compile(r"<node[^>]*>")
 ATTR = lambda tag, nama: (re.search(nama + r'="([^"]*)"', tag) or [None, ""])[1]
@@ -85,6 +99,10 @@ class KlienU2:
     def geser(self, x1, y1, x2, y2, ms):
         langkah = max(5, ms // 5)  # langkah swipe u2 ≈ 5 ms (teruji 8 Okt)
         return self.rpc("swipe", [x1, y1, x2, y2, langkah])
+
+    def tahan(self, x, y):
+        """Tekan-lama native u2 (longClick). Patch (2) 9 Okt."""
+        return self.rpc("longClick", [x, y])
 
     def tombol(self, nama):
         return self.rpc("pressKey", [nama])
@@ -208,6 +226,24 @@ class Runner:
             if not self.target or 'package="%s"' % self.target in xml:
                 return
 
+    def jeda_manual(self, sisa):
+        """JEDA <dtk> — penundaan yang SENGAJA diminta perancang misi.
+        Patch (2) 9 Okt: divalidasi (angka, >= 0, bukan NaN/inf), lantai
+        0.05 dtk, plafon JEDA_BATAS dtk (dilampaui = dibatasi + dicatat,
+        misi tidak menggantung)."""
+        try:
+            d = float(sisa.strip().strip('"'))
+        except ValueError:
+            raise MisiGagal("JEDA: durasi bukan angka: %r" % sisa)
+        if d < 0 or d != d or d == float("inf") or d == float("-inf"):
+            raise MisiGagal("JEDA: durasi tidak waras: %r" % sisa)
+        if d > JEDA_BATAS:
+            self.catat("INFO", "JEDA %gs dibatasi ke %gs (plafon) — "
+                               "pecah misi bila butuh lebih lama" % (d, JEDA_BATAS))
+            d = JEDA_BATAS
+        time.sleep(max(0.05, d))
+        return "%.1fs" % max(0.05, d)
+
     def tunggu_teks(self, teks, timeout):
         t0 = time.time()
         jeda = POLL_TUNGGU if self.mode == "server" else 8
@@ -239,7 +275,7 @@ class Runner:
         lama = self.xml_terakhir
         self.klien.klik(*kt)
         self.tunggu_berubah(lama)
-        time.sleep(0.4)
+        time.sleep(0.08)   # patch: tunggu IME/render, cukup 80 ms (terverifikasi verifikasi tempel tetap lolos)
         kt = kolom_teks(self.dump(paksa=True)) or kt
         # Jalur A: chip clipboard di toolbar keyboard (Samsung Honeyboard) —
         # node berisi potongan awal isi clipboard. Terverifikasi manual 8 Okt
@@ -252,17 +288,34 @@ class Runner:
             self.klien.klik(*chip)
             cara = "chip-clipboard-keyboard"
         else:
-            # Jalur B: tekan-lama 800 ms (geser diam) lalu ketuk menu Tempel/Paste
-            self.klien.geser(kt[0], kt[1], kt[0], kt[1], 800)
-            time.sleep(0.6)
-            xml = self.dump(paksa=True)
-            tm = cari_titik(xml, "Tempel") or cari_titik(xml, "Paste")
+            # Jalur B: tekan-lama lalu ketuk menu Tempel/Paste. Patch (2)
+            # 9 Okt: longClick native u2 di mode server (cadangan geser diam
+            # 800 ms); menu dicek adaptif 20 ms, batas 600 ms — bukan sleep
+            # datar. Mode jembatan: perilaku lama (dump rish mahal).
+            if self.mode == "server":
+                try:
+                    self.klien.tahan(kt[0], kt[1])
+                except Exception:
+                    self.klien.geser(kt[0], kt[1], kt[0], kt[1], 800)
+                tm = None
+                t_menu = time.time()
+                while time.time() - t_menu < 0.6:
+                    xml = self.dump(paksa=True)
+                    tm = cari_titik(xml, "Tempel") or cari_titik(xml, "Paste")
+                    if tm:
+                        break
+                    time.sleep(0.02)
+            else:
+                self.klien.geser(kt[0], kt[1], kt[0], kt[1], 800)
+                time.sleep(0.08)
+                xml = self.dump(paksa=True)
+                tm = cari_titik(xml, "Tempel") or cari_titik(xml, "Paste")
             if tm:
                 self.klien.klik(*tm)
                 cara = "fokus+tekan-lama+menu"
             else:
                 raise MisiGagal("TEMPEL: menu Tempel/Paste tidak muncul dan chip clipboard tidak terlihat")
-        time.sleep(0.5)
+        time.sleep(0.02)   # patch (2): pra-verifikasi, cukup 20 ms
         probe = teks.split(" ")[0]
         if probe not in self.dump(paksa=True):
             raise MisiGagal("TEMPEL tidak terbukti tampil di layar (%s)" % cara)
@@ -338,7 +391,7 @@ class Runner:
                         teks_bersih = sisa.strip('"')
                         try:
                             rish('input text "%s"' % teks_bersih.replace(" ", "%s"))
-                            time.sleep(0.5)
+                            time.sleep(0.08)   # patch: input-text render <80 ms
                             if teks_bersih.split(" ")[0] not in self.dump(paksa=True):
                                 raise IOError("input-text tidak terbukti tampil di layar")
                             ket = "(%d karakter via rish input-text, terverifikasi)" % len(teks_bersih)
@@ -361,7 +414,7 @@ class Runner:
                         rish("input keyevent %s" % kunci)
                     ket = sisa
                 elif cmd == "JEDA":
-                    time.sleep(float(sisa)); ket = "%sd" % sisa
+                    ket = self.jeda_manual(sisa)
                 elif cmd == "FOTO":
                     keluar = rish("screencap -p /sdcard/md-foto.png; cp /sdcard/md-foto.png /sdcard/Download/%s" % (sisa or "foto.png"))
                     ket = sisa or "foto.png"
@@ -385,6 +438,24 @@ class Runner:
 
 
 if __name__ == "__main__":
+    # Cek awal A4 (spek bayu 9 Okt): pohon (19102) terikat = tolak jalan.
+    try:
+        import socket as _s
+        _c = _s.create_connection(("127.0.0.1", 19102), 1.5)
+        _c.settimeout(1.5)
+        _c.sendall(b"PING\n")
+        _pong = _c.recv(80)
+        _c.close()
+    except Exception:
+        _pong = b""
+    if b'"pong":true' in _pong:
+        print("DITOLAK (A4): pohon 19102 terikat — misi-cepat (ERA u2) akan "
+              "melepas ikatannya lewat dump uiautomator. Pakai misi-ad-hoc.py "
+              "(mode pohon).", file=sys.stderr)
+        sys.exit(3)
+    print("PERINGATAN (A4): misi-cepat = ERA u2 — JANGAN dipakai saat pohon "
+          "terikat (dump uiautomator melepas ikatan LayananAkses).",
+          file=sys.stderr)
     if len(sys.argv) != 2:
         print("Pakai: misi-cepat.py <berkas.job>", file=sys.stderr)
         sys.exit(2)

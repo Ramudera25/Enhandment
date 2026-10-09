@@ -65,12 +65,23 @@ import time
 
 U2_HOST, U2_PORT = "127.0.0.1", 9008
 POHON_HOST, POHON_PORT = "127.0.0.1", 19102
-POLL_TUNGGU = 0.25       # dtk — polling TUNGGU_TEKS mode pohon/dump
+POLL_TUNGGU = 0.02       # dtk — polling TUNGGU_TEKS mode pohon/dump (patch 9 Okt)
 POLL_TUNGGU_JEMBATAN = 8  # dtk — polling mode jembatan (dump rish mahal)
-POLL_UBAH = 0.15         # dtk — polling "keadaan berubah" sesudah tindakan
+POLL_UBAH = 0.02         # dtk — polling "keadaan berubah" sesudah tindakan (patch 9 Okt: RTT 2-3 ms)
+# PATCH LATENSI 9 Okt 2026 (uji terukur): RTT pohon 19102 = 2-3 ms, jadi poll
+# rapat nyaris gratis. POLL 0.15/0.25 -> 0.02 dtk; poll basi 0.1 -> 0.005 dtk;
+# jeda kecil fungsional 0.4/0.5/0.6 dtk -> 0.08 dtk (tetap ada untuk IME/render/
+# anti ketuk-ganda). Patch (2) 9 Okt: JEDA divalidasi + plafon 5 dtk;
+# tekan-lama pakai TAHAN (pohon) / longClick (u2) native, geser-800 = cadangan.
+
 BATAS_UBAH = 1.2         # dtk — batas tunggu versi naik / hierarki berubah
 BATAS_UMUR_MS = 500      # ms — aturan §4: jawaban pohon lebih tua = ditolak
 COBA_BASI = 3            # kueri ulang maks. saat jawaban pohon basi
+# Patch (2) 9 Okt: plafon JEDA manual — permintaan tunggu perancang misi
+# dihormati sampai 5 dtk; dilampaui = dibatasi + dicatat (misi tidak
+# menggantung; pecah misi bila butuh lebih lama).
+JEDA_BATAS = 5.0         # dtk
+
 NODE_RE = re.compile(r"<node[^>]*>")
 ATTR = lambda tag, nama: (re.search(nama + r'="([^"]*)"', tag) or [None, ""])[1]
 BOUNDS_RE = re.compile(r"bounds=\"\[(\d+),(\d+)\]\[(\d+),(\d+)\]\"")
@@ -232,6 +243,7 @@ class Runner:
         self.klien = KlienU2()
         self.pohon = KlienPohon()
         self.target = ""
+        self.hasil_path = None  # Patch A3: berkas .hasil per run
         self.mode = None        # "pohon" | "dump" | "jembatan"
         self.tangan = None      # "u2" | "rish"
         self.pohon_hidup = False
@@ -244,20 +256,47 @@ class Runner:
 
     # -- infrastruktur -------------------------------------------------
     def catat(self, status, pesan):
-        print("[%s] %s %s" % (time.strftime("%H:%M:%S"), status, pesan), flush=True)
+        baris = "[%s] %s %s" % (time.strftime("%H:%M:%S"), status, pesan)
+        print(baris, flush=True)
+        # Patch A3: salin ke berkas .hasil (mengikuti pola .hasil misi-cepat)
+        if self.hasil_path:
+            try:
+                with open(self.hasil_path, "a", encoding="utf-8") as f:
+                    f.write(baris + "\n")
+            except Exception:
+                pass
 
     def _pohon(self, perintah):
-        """Satu kueri ke server pohon; None bila pohon tidak menjawab
-        (turun kelas dicatat sekali, sesudahnya observasi murni dump)."""
+        """Satu kueri ke server pohon. Patch A1 (spek bayu 9 Okt): bila
+        pohon tidak menjawab, tunggu dengan jeda bertingkat 0,5→1→2→4 dtk
+        (total ±7,5 dtk + batas koneksi tiap percobaan, maks ±15 dtk) dan
+        coba lagi. Tetap diam = MisiGagal "pohon tidak menjawab" — misi
+        berhenti; pohon TIDAK disentuh jalur lain (tanpa dump/u2/jembatan)."""
         if not self.pohon_hidup:
             return None
         try:
             j = self.pohon.tanya(perintah)
         except Exception:
             self.pohon_hidup = False
-            self.catat("INFO", "server pohon tidak menjawab — observasi jatuh "
-                               "ke dump (turun kelas jujur, mode pohon berakhir)")
-            return None
+            t0 = time.time()
+            for jeda in (0.5, 1.0, 2.0, 4.0):
+                self.catat("INFO", "pohon tidak menjawab — coba lagi dalam "
+                                   "%.1f dtk (tanpa jalur lain, A1)" % jeda)
+                time.sleep(jeda)
+                self.pohon_hidup = True
+                try:
+                    j = self.pohon.tanya(perintah)
+                    self.catat("INFO", "pohon hidup kembali setelah %.1f dtk"
+                               % (time.time() - t0))
+                    break
+                except Exception:
+                    self.pohon_hidup = False
+                    j = None
+            if j is None:
+                raise MisiGagal("pohon tidak menjawab setelah percobaan "
+                                "bertingkat %.1f dtk — misi berhenti jujur; "
+                                "pohon TIDAK disentuh jalur lain (A1)"
+                                % (time.time() - t0))
         v = j.get("versi")
         if isinstance(v, int):
             self.versi = v
@@ -302,6 +341,12 @@ class Runner:
             return None
 
     def _tangan_cadangan(self):
+        # Patch A1 (spek bayu 9 Okt): mode pohon tidak boleh menyentuh
+        # dump uiautomator / klien u2 / jembatan rish — pohon satu-satunya
+        # tangan; kehabisan pohon = misi berhenti jujur.
+        if self.mode == "pohon":
+            raise MisiGagal("mode pohon: tidak ada tangan cadangan — pohon "
+                            "TIDAK digantikan dump/u2/rish (A1)")
         return "u2" if self.u2_hidup else "rish"
 
     def tangan_klik(self, x, y):
@@ -319,6 +364,24 @@ class Runner:
             self.klien.klik(x, y)
         else:
             rish("input tap %d %d" % (x, y))
+
+    def tangan_tahan(self, x, y):
+        """Tekan-lama native via gestur TAHAN pohon (dispatchGesture 650 ms,
+        balasan server sudah versi-gated). Mengembalikan True bila jalur
+        TAHAN native terpakai; False = pohon tak menjawab (pemanggil jatuh
+        ke geser jarak-nol 800 ms yang jalan di semua tangan). ok=false dari
+        layanan DIPERCAYA (tidak diulang — anti ketukan ganda)."""
+        if self.tangan == "pohon":
+            j = self._gestur("TAHAN %d %d" % (x, y))
+            if j is not None:
+                if not j.get("ok"):
+                    self.catat("INFO", "gestur TAHAN ditolak layanan pohon "
+                                       "(ok=false) — tidak diulang via cadangan")
+                return True
+            self.tangan = self._tangan_cadangan()
+            self.catat("INFO", "tangan pohon tidak menjawab — turun ke "
+                               "tangan %s" % self.tangan)
+        return False
 
     def tangan_geser(self, x1, y1, x2, y2, ms):
         if self.tangan == "pohon":
@@ -347,9 +410,12 @@ class Runner:
             self.tangan = self._tangan_cadangan()
             self.catat("INFO", "tangan pohon tidak menjawab — turun ke "
                                "tangan %s" % self.tangan)
+        if self.mode == "pohon" and nama not in ("back", "home"):
+            raise MisiGagal("TOMBOL %s butuh keyevent (rish/Shizuku) — A1: "
+                            "tanpa jalur rish di mode pohon" % nama)
         if self.tangan == "u2" and nama in ("home", "back", "enter"):
             self.klien.tombol(nama)
-        else:
+        elif self.mode != "pohon":
             rish("input keyevent %s" % KODE_TOMBOL.get(nama, nama))
 
     # -- observasi terarah ------------------------------------------------
@@ -360,7 +426,8 @@ class Runner:
             j = self._pohon("PAKET?")
             if j is not None:
                 return j.get("paket") or ""
-        m = re.search(r'package="([^"]+)"', self.dump(paksa=True))
+        m = (re.search(r'package="([^"]+)"', self.dump(paksa=True))
+             if self.mode != "pohon" else None)  # A1: pohon tanpa dump
         return m.group(1) if m else ""
 
     def node_semua(self):
@@ -378,6 +445,9 @@ class Runner:
                         "titik": titik_dari_bounds(n.get("b"))})
                 if hasil:
                     return hasil
+        # Patch A1: mode pohon TIDAK turun ke dump; kosong = keputusan pohon.
+        if self.mode == "pohon":
+            return hasil
         hasil = []
         for m in NODE_RE.finditer(self.dump(paksa=True)):
             tag = m.group(0)
@@ -413,10 +483,12 @@ class Runner:
                     if titik:
                         return titik[0], titik[1], "pohon"
                     break
-                time.sleep(0.1)  # basi: beri waktu salinan menyegar, kueri lagi
-        titik = cari_titik(self.dump(paksa=True), teks)
-        if titik:
-            return titik[0], titik[1], "dump"
+                time.sleep(0.005)  # patch 9 Okt: basi -> poll rapat 5 ms (RTT 2-3 ms)
+        # Patch A1: mode pohon tidak jatuh ke dump untuk tindakan.
+        if self.mode != "pohon":
+            titik = cari_titik(self.dump(paksa=True), teks)
+            if titik:
+                return titik[0], titik[1], "dump"
         return None
 
     # -- gerbang kebenaran --------------------------------------------------
@@ -450,12 +522,10 @@ class Runner:
                     self.gerbang_versi = None
                     return
             self.gerbang_versi = None
-            try:
-                self.dump(paksa=True)
-                self.catat("INFO", "versi pohon tidak naik dalam %.1f dtk — "
-                                   "verifikasi berikutnya dialihkan ke dump" % BATAS_UBAH)
-            except Exception:
-                pass
+            # Patch A1: tanpa dump — pohon satu-satunya sumber verifikasi;
+            # versi tidak naik = dicatat, bukan dialihkan ke dump.
+            self.catat("INFO", "versi pohon tidak naik dalam %.1f dtk — "
+                               "lanjut (A1: tanpa jalur dump)" % BATAS_UBAH)
             return
         if xml_lama is None:
             return
@@ -493,6 +563,20 @@ class Runner:
                             % (self.target, cmd))
 
     # -- langkah: buka ---------------------------------------------------
+    def tunggu_simpul_awal(self, batas=30):
+        """Patch A2 (spek bayu 9 Okt): tunggu SIMPUL PERTAMA halaman —
+        berbasis KONTEN pohon, bukan umur salinan (layar statis tidak
+        masalah: POHON tetap membawa simpul yang ada). Gagal = MisiGagal
+        jujur; BUKA TIDAK memicu pergantian mode."""
+        t0 = time.time()
+        while time.time() - t0 < batas:
+            j = self._pohon("POHON")
+            if j is not None and j.get("nodes"):
+                return time.time() - t0
+            time.sleep(POLL_TUNGGU)
+        raise MisiGagal("BUKA: simpul halaman tidak terlihat dalam %d dtk "
+                        "(A2: tanpa pergantian mode)" % batas)
+
     def _tunggu_paket(self, paket, batas=6):
         t0 = time.time()
         while time.time() - t0 < batas:
@@ -515,14 +599,19 @@ class Runner:
                 komponen = baris
                 break
         self.sebelum_tindakan()
+        # Patch A1: luncurkan via am Termux (terbukti jalan); mode pohon
+        # tidak menyentuh rish/monkey dalam keadaan apa pun.
         if komponen:
             r = subprocess.run(["am", "start", "-n", komponen],
                                capture_output=True, text=True, timeout=20)
-            if r.returncode != 0:
+            if r.returncode != 0 and self.mode != "pohon":
                 rish("am start -n %s" % komponen)
-        else:
+        elif self.mode != "pohon":
             # Cadangan: monkey meluncurkan activity LAUNCHER paket.
             rish("monkey -p %s -c android.intent.category.LAUNCHER 1" % paket)
+        else:
+            raise MisiGagal("BUKA_APLIKASI: komponen tidak ter-resolve — "
+                            "A1: tanpa jalur rish di mode pohon")
         if not self._tunggu_paket(paket):
             raise MisiGagal("BUKA_APLIKASI %s: paket tidak tampil di depan "
                             "dalam 6 dtk (resolve: %s)" % (paket, komponen or "-"))
@@ -541,7 +630,11 @@ class Runner:
             subprocess.run(["am", "start", "-a", sisa],
                            capture_output=True, text=True, timeout=20)
         sasaran = self.target or sisa.split("/")[0]
-        self._tunggu_paket(sasaran)
+        # Patch A2: tunggu paket target LALU simpul pertama halaman (maks
+        # 30 dtk, berbasis konten) — bukan menyerah pada timeout pendek
+        # lalu mengganti mode.
+        self._tunggu_paket(sasaran, 12)
+        self.tunggu_simpul_awal(30)
         self.tunggu_berubah()
 
     def tautan(self, url):
@@ -597,6 +690,24 @@ class Runner:
                 raise MisiGagal('TUNGGU_TEKS "%s" timeout %sd' % (teks, timeout))
             time.sleep(jeda)
 
+    def jeda_manual(self, sisa):
+        """JEDA <dtk> — penundaan yang SENGAJA diminta perancang misi.
+        Patch (2) 9 Okt: divalidasi (angka, >= 0, bukan NaN/inf), lantai
+        0.05 dtk, plafon JEDA_BATAS dtk (dilampaui = dibatasi + dicatat,
+        misi tidak menggantung)."""
+        try:
+            d = float(sisa.strip().strip('"'))
+        except ValueError:
+            raise MisiGagal("JEDA: durasi bukan angka: %r" % sisa)
+        if d < 0 or d != d or d == float("inf") or d == float("-inf"):
+            raise MisiGagal("JEDA: durasi tidak waras: %r" % sisa)
+        if d > JEDA_BATAS:
+            self.catat("INFO", "JEDA %gs dibatasi ke %gs (plafon) — "
+                               "pecah misi bila butuh lebih lama" % (d, JEDA_BATAS))
+            d = JEDA_BATAS
+        time.sleep(max(0.05, d))
+        return "%.1fs" % max(0.05, d)
+
     def cek_teks(self, teks):
         """-> sumber bukti ("pohon"/"dump"). Gagal = MisiGagal jujur."""
         if self.mode == "pohon":
@@ -605,20 +716,22 @@ class Runner:
                 if j is None:
                     break
                 if j.get("umur_ms", 10 ** 9) > BATAS_UMUR_MS:
-                    time.sleep(0.1)  # basi: jangan putuskan, kueri lagi
+                    time.sleep(0.005)  # patch 9 Okt: basi -> poll rapat 5 ms
                     continue
                 v = j.get("versi")
                 if self.gerbang_versi is not None and \
                         not (v is not None and v > self.gerbang_versi):
-                    time.sleep(0.1)  # masih salinan pra-ketuk: belum sah
+                    time.sleep(0.005)  # patch 9 Okt: pra-ketuk -> poll rapat 5 ms
                     continue
                 if j.get("ada"):
                     self.gerbang_versi = None
                     return "pohon"
                 break  # "tidak ada" dari salinan segar: dump memastikan
-        if teks in self.dump(paksa=True):
+        # Patch A1: mode pohon tidak jatuh ke dump — keputusan hanya pohon.
+        if self.mode != "pohon" and teks in self.dump(paksa=True):
             return "dump"
-        raise MisiGagal('CEK_TEKS "%s" TIDAK tampil' % teks)
+        raise MisiGagal('CEK_TEKS "%s" TIDAK tampil di pohon (A1: tanpa '
+                        'jalur dump)' % teks)
 
     # -- langkah: ketuk & isi ----------------------------------------------
     def ketuk_teks(self, teks):
@@ -658,17 +771,24 @@ class Runner:
                                     "mengetik ganda")
                 return "ISI server pohon, terverifikasi"
             sebab = (j or {}).get("sebab") or "server pohon tidak menjawab"
-            self.catat("INFO", "ISI via pohon gagal (%s) — jatuh ke KETIK lama" % sebab)
+            # Patch A1: tanpa jalur KETIK/rish di mode pohon — berhenti jujur.
+            raise MisiGagal("ISI_TEKS gagal di pohon (%s) — A1: tanpa jalur "
+                            "KETIK/rish di mode pohon" % sebab)
         return self.ketik(teks)
 
     def ketik(self, teks):
         # Strategi warisan misi-cepat (bukti perangkat 8 Okt):
         # (1) input text via rish ke kolom fokus, diverifikasi dari layar;
         # (2) TEMPEL clipboard sebagai cadangan. Mode jembatan: langsung rish.
+        # Patch A1: mode pohon tidak boleh rish ('input text') — ISI pohon
+        # satu-satunya jalur ketik; bila gagal, berhenti jujur.
+        if self.mode == "pohon":
+            raise MisiGagal("KETIK dilarang di mode pohon (A1: tanpa jalur "
+                            "rish/u2) — gunakan ISI_TEKS (ISI pohon)")
         if self.mode in ("pohon", "dump"):
             try:
                 rish('input text "%s"' % teks.replace(" ", "%s"))
-                time.sleep(0.5)
+                time.sleep(0.08)   # patch: input-text render <80 ms
                 probe = teks.split(" ")[0]
                 terbukti = False
                 if self.mode == "pohon":
@@ -701,7 +821,7 @@ class Runner:
         xml_lama = self.sebelum_tindakan()
         self.tangan_klik(*kolom["titik"])
         self.tunggu_berubah(xml_lama)
-        time.sleep(0.4)
+        time.sleep(0.08)   # patch: tunggu IME/render, cukup 80 ms
         # Segarkan titik kolom: keyboard bisa menggeser tata letak.
         nodes = self.node_semua()
         kolom2 = next((n for n in nodes if n["edit"] and n["titik"]), None)
@@ -716,18 +836,30 @@ class Runner:
             self.tangan_klik(chip[0], chip[1])
             cara = "chip-clipboard-keyboard"
         else:
-            # Jalur B: tekan-lama 800 ms (geser diam) lalu menu Tempel/Paste.
-            self.tangan_geser(kolom["titik"][0], kolom["titik"][1],
-                              kolom["titik"][0], kolom["titik"][1], 800)
-            time.sleep(0.6)
-            tm = self.cari_titik_teks("Tempel") or self.cari_titik_teks("Paste")
+            # Jalur B: tekan-lama lalu menu Tempel/Paste. Patch (2) 9 Okt:
+            # TAHAN native pohon (dispatchGesture 650 ms) didahulukan; geser
+            # diam 800 ms hanya cadangan tangan u2/rish. Menu dicek adaptif
+            # 20 ms di mode pohon (RTT 2-3 ms), 0.8 dtk di mode dump (pelajaran
+            # Fase 3: dump rish/u2 jangan dipoll rapat).
+            if not self.tangan_tahan(kolom["titik"][0], kolom["titik"][1]):
+                self.tangan_geser(kolom["titik"][0], kolom["titik"][1],
+                                  kolom["titik"][0], kolom["titik"][1], 800)
+            tm = None
+            t_menu = time.time()
+            langkah = 0.02 if self.mode == "pohon" else 0.8
+            batas_menu = 0.6 if self.mode == "pohon" else 4.0
+            while time.time() - t_menu < batas_menu:
+                tm = self.cari_titik_teks("Tempel") or self.cari_titik_teks("Paste")
+                if tm:
+                    break
+                time.sleep(langkah)
             if tm:
                 self.tangan_klik(tm[0], tm[1])
                 cara = "fokus+tekan-lama+menu"
             else:
                 raise MisiGagal("TEMPEL: menu Tempel/Paste tidak muncul dan "
                                 "chip clipboard tidak terlihat")
-        time.sleep(0.5)
+        time.sleep(0.02)   # patch (2): pra-verifikasi, cukup 20 ms
         probe = teks.split(" ")[0]
         terbukti = False
         if self.mode == "pohon":
@@ -741,6 +873,14 @@ class Runner:
 
     # -- mesin utama ---------------------------------------------------------
     def jalankan(self, path):
+        # Patch A3 (spek bayu 9 Okt): berkas .hasil dibuat di AWAL run —
+        # lulus maupun gagal (termasuk gagal saat startup) selalu meninggalkan
+        # berkas di ~/muse-droid/log/<nama>-<stempel>.hasil.
+        import os
+        nama = os.path.splitext(os.path.basename(path))[0]
+        os.makedirs(os.path.expanduser("~/muse-droid/log"), exist_ok=True)
+        self.hasil_path = os.path.expanduser(
+            "~/muse-droid/log/%s-%s.hasil" % (nama, time.strftime("%Y%m%d-%H%M%S")))
         # Gerbang kaki kendali: pohon dulu, u2 berikutnya, rish terakhir.
         try:
             j = self.pohon.tanya("PING")
@@ -839,8 +979,11 @@ class Runner:
                     self.tunggu_berubah(xml_lama)
                     ket = sisa
                 elif cmd == "JEDA":
-                    time.sleep(float(sisa)); ket = "%sd" % sisa
+                    ket = self.jeda_manual(sisa)
                 elif cmd == "FOTO":
+                    if self.mode == "pohon":
+                        raise MisiGagal("FOTO butuh screencap (rish/Shizuku) "
+                                        "— A1: tanpa jalur rish di mode pohon")
                     rish("screencap -p /sdcard/md-foto.png; "
                          "cp /sdcard/md-foto.png /sdcard/Download/%s"
                          % (sisa or "foto.png"))
