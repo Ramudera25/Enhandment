@@ -774,3 +774,29 @@ Atas perintah pemilik, prosedur LIHAT dijalankan ke Facebook:
   Facebook (dugaan: tangkapan saat transisi gagal diam-diam;
   perlu logging galat di jalur otomatis — pekerjaan lanjutan,
   bukan penahan rilis).
+
+## V4.3.1/V4.3.2 — 9 Okt sore (bayu): perbaikan tangkap otomatis
+
+- V4.3.1 (kode 44): tangkapMentah() dipisah; jalur otomatis mencoba
+  s.d. 3x (jeda 0/900/1800 ms); penghitung oto_sukses/oto_gagal +
+  oto_galat tersaji di header AMBIL. Terpasang -r dengan SUKSES
+  (bukti perbaikan tanda tangan kanonis bekerja: tanpa uninstall,
+  tanpa dialog Allow, pohon bangkit sendiri).
+- AKAR MASALAH SEBENARNYA (ditemukan dari membaca ulang segarkan()
+  sesudah V4.3.1 tetap diam): tambalan V4.3 telah MENGGANDAKAN
+  ekor segarkan() — paketLama dibaca SESUDAH paketDepan ditimpa,
+  jadi syarat picu (paketBaru != paketLama) mustahil terpenuhi;
+  picu mati sejak lahir (dan versi terhitung ganda per segar).
+  Bukan kegagalan transisi seperti dugaan awal.
+- V4.3.2 (kode 45, sha256 APK lihat commit): dedup ekor segarkan();
+  paketLama dibaca sebelum timpa; versi naik sekali per segar.
+- Uji V4.3.2 di perangkat: lompatan HOME -> laci -> Facebook
+  menghasilkan oto_sukses=2, oto_gagal=0; AMBIL menyajikan buffer
+  berumur 2,5 dtk berisi layar Facebook terkini (terverifikasi
+  visual). Tangkap otomatis: LULUS.
+- Regresi V4.2 di V4.3 (baterai perintah): PING/PAKET?/TEKS?/CARI/
+  POHON/TOMBOL/GLOBAL/ISI/KETUK/GESER + 19101 + penjaga — semua
+  sehat; V4.3 adalah superset murni, tidak ada perintah berubah.
+- Koreksi spec: misi-uji-standar.job langkah 6 TEMPEL -> ISI_TEKS
+  (kedua salinan tersinkron; TEMPEL tidak dihapus dari runner —
+  ia tetap sah untuk formulir yang menampilkannya).

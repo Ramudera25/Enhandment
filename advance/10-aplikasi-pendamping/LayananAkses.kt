@@ -91,6 +91,10 @@ object PohonUI {
     @Volatile var bingkaiVersi: Long = -1
     @Volatile var bingkaiStempelMs: Long = 0
     @Volatile var tangkapTerakhirMs: Long = 0
+    // V4.3.1: hasil tangkap otomatis terakhir — teramati dari header AMBIL.
+    @Volatile var otoSukses: Int = 0
+    @Volatile var otoGagal: Int = 0
+    @Volatile var otoGalat: String = ""
 }
 
 class LayananAkses : AccessibilityService() {
@@ -180,10 +184,6 @@ class LayananAkses : AccessibilityService() {
                 // Node berubah di tengah jalan — lewati, salinan berikutnya menutupinya.
             }
         }
-        PohonUI.simpul = hasil
-        PohonUI.paketDepan = akar.packageName?.toString() ?: ""
-        PohonUI.stempelMs = SystemClock.uptimeMillis()
-        PohonUI.versi++
         val paketBaru = akar.packageName?.toString() ?: ""
         val paketLama = PohonUI.paketDepan
         PohonUI.simpul = hasil
@@ -196,7 +196,7 @@ class LayananAkses : AccessibilityService() {
         // utama yang juga mengantar callback tangkapan).
         if (paketLama.isNotEmpty() && paketBaru.isNotEmpty() && paketBaru != paketLama) {
             penangan.postDelayed({
-                thread { try { bingkai(true) } catch (e: Exception) { } }
+                thread { try { tangkapOtomatis() } catch (e: Exception) { } }
             }, 400)
         }
     }
@@ -380,33 +380,21 @@ class LayananAkses : AccessibilityService() {
         return out
     }
 
-    // ---- penyaji socket 19102 ----    // ---- mata (V4.3): tangkap layar layanan aksesibilitas ----
+    // ---- mata (V4.3.1) ----
     // AccessibilityService.takeScreenshot (API 30+) — tanpa izin
     // MediaProjection per sesi; yang ditolak sistem (jendela aman
     // FLAG_SECURE, layar mati) dilaporkan jujur lewat kode galat.
 
     data class HasilBingkai(val json: JSONObject, val png: ByteArray?)
 
-    fun bingkai(segar: Boolean): HasilBingkai {
-        val out = JSONObject()
-        val buf = PohonUI.bingkaiPng
-        val umurBuf = if (PohonUI.bingkaiStempelMs == 0L) -1
-            else SystemClock.uptimeMillis() - PohonUI.bingkaiStempelMs
-        if (!segar && buf != null) {
-            return HasilBingkai(out.put("ok", true).put("sumber", "buffer")
-                .put("versi_bingkai", PohonUI.bingkaiVersi)
-                .put("umur_bingkai_ms", umurBuf).put("byte", buf.size), buf)
+    @Volatile private var galatTangkap: String = ""
+
+    // Satu percobaan tangkap mentah; null bila gagal (galatTangkap terisi).
+    private fun tangkapMentah(): ByteArray? {
+        if (Build.VERSION.SDK_INT < 30) {
+            galatTangkap = "takeScreenshot butuh Android 11+"
+            return null
         }
-        if (instans == null) return HasilBingkai(
-            out.put("ok", false).put("sebab", "layanan tidak aktif"), null)
-        val sejak = SystemClock.uptimeMillis() - PohonUI.tangkapTerakhirMs
-        if (buf != null && sejak < 1100) {
-            return HasilBingkai(out.put("ok", true).put("sumber", "buffer-throttle")
-                .put("versi_bingkai", PohonUI.bingkaiVersi)
-                .put("umur_bingkai_ms", umurBuf).put("byte", buf.size), buf)
-        }
-        if (Build.VERSION.SDK_INT < 30) return HasilBingkai(
-            out.put("ok", false).put("sebab", "takeScreenshot butuh Android 11+"), null)
         val gerbang = CountDownLatch(1)
         var png: ByteArray? = null
         var galat = -1
@@ -436,23 +424,79 @@ class LayananAkses : AccessibilityService() {
                     }
                 })
         } catch (e: Exception) {
-            return HasilBingkai(out.put("ok", false)
-                .put("sebab", "takeScreenshot melempar: " + e.message), null)
+            galatTangkap = "takeScreenshot melempar: " + e.message
+            return null
         }
         gerbang.await(4, TimeUnit.SECONDS)
         val hasilPng = png
-        if (hasilPng == null) return HasilBingkai(out.put("ok", false)
-            .put("sebab", if (galat >= 0) "takeScreenshot gagal, kode " + galat
-                else "timeout tangkapan (4 dtk)"), null)
-        PohonUI.bingkaiPng = hasilPng
-        PohonUI.bingkaiVersi = PohonUI.versi
-        PohonUI.bingkaiStempelMs = SystemClock.uptimeMillis()
-        return HasilBingkai(out.put("ok", true).put("sumber", "segar")
-            .put("versi_bingkai", PohonUI.bingkaiVersi)
-            .put("umur_bingkai_ms", 0).put("byte", hasilPng.size), hasilPng)
+        if (hasilPng == null) {
+            galatTangkap = if (galat >= 0) "takeScreenshot gagal, kode " + galat
+                else "timeout tangkapan (4 dtk)"
+        }
+        return hasilPng
     }
 
+    private fun simpanBingkai(png: ByteArray) {
+        PohonUI.bingkaiPng = png
+        PohonUI.bingkaiVersi = PohonUI.versi
+        PohonUI.bingkaiStempelMs = SystemClock.uptimeMillis()
+    }
 
+    // Tangkap otomatis terpicu ganti paket. Di V4.3 ia menembak sekali
+    // 400 ms sesudah ganti paket — layar kerap masih transisi dan
+    // tembakan itu gagal diam-diam (buffer tidak pernah berubah).
+    // V4.3.1: coba sampai 3x dengan jeda membesar (0/900/1800 ms);
+    // hasil tiap episode TERHITUNG dan galat terakhir tercatat, bisa
+    // dibaca dari header AMBIL ("oto_sukses"/"oto_gagal"/"oto_galat").
+    fun tangkapOtomatis() {
+        val jeda = longArrayOf(0, 900, 1800)
+        for (i in jeda.indices) {
+            if (jeda[i] > 0) Thread.sleep(jeda[i])
+            val png = try { tangkapMentah() } catch (e: Exception) { null }
+            if (png != null) {
+                simpanBingkai(png)
+                PohonUI.otoSukses++
+                return
+            }
+        }
+        PohonUI.otoGagal++
+        PohonUI.otoGalat = galatTangkap
+    }
+
+    fun bingkai(segar: Boolean): HasilBingkai {
+        val out = JSONObject()
+        val buf = PohonUI.bingkaiPng
+        val umurBuf = if (PohonUI.bingkaiStempelMs == 0L) -1
+            else SystemClock.uptimeMillis() - PohonUI.bingkaiStempelMs
+        if (!segar && buf != null) {
+            out.put("ok", true).put("sumber", "buffer")
+                .put("versi_bingkai", PohonUI.bingkaiVersi)
+                .put("umur_bingkai_ms", umurBuf).put("byte", buf.size)
+                .put("oto_sukses", PohonUI.otoSukses).put("oto_gagal", PohonUI.otoGagal)
+            if (PohonUI.otoGalat.isNotEmpty()) out.put("oto_galat", PohonUI.otoGalat)
+            return HasilBingkai(out, buf)
+        }
+        if (instans == null) return HasilBingkai(
+            out.put("ok", false).put("sebab", "layanan tidak aktif"), null)
+        val sejak = SystemClock.uptimeMillis() - PohonUI.tangkapTerakhirMs
+        if (buf != null && sejak < 1100) {
+            out.put("ok", true).put("sumber", "buffer-throttle")
+                .put("versi_bingkai", PohonUI.bingkaiVersi)
+                .put("umur_bingkai_ms", umurBuf).put("byte", buf.size)
+                .put("oto_sukses", PohonUI.otoSukses).put("oto_gagal", PohonUI.otoGagal)
+            if (PohonUI.otoGalat.isNotEmpty()) out.put("oto_galat", PohonUI.otoGalat)
+            return HasilBingkai(out, buf)
+        }
+        val png = tangkapMentah()
+        if (png == null) return HasilBingkai(
+            out.put("ok", false).put("sebab", galatTangkap), null)
+        simpanBingkai(png)
+        return HasilBingkai(out.put("ok", true).put("sumber", "segar")
+            .put("versi_bingkai", PohonUI.bingkaiVersi)
+            .put("umur_bingkai_ms", 0).put("byte", png.size), png)
+    }
+
+    // ---- penyaji socket 19102 ----
 
     private fun penyaji() {
         try {
