@@ -325,14 +325,9 @@ class LayananAkses : AccessibilityService() {
                         PowerManager.ACQUIRE_CAUSES_WAKEUP or
                         PowerManager.ON_AFTER_RELEASE, "musedroid:bangun")
                 wl.acquire(8000)
-                // Poll isInteractive sampai 2 dtk (terbukti 9 Okt: cek
-                // tunggal 400 ms prematur — layar bangun belakangan).
-                var t = 0
-                while (t < 2000) {
-                    Thread.sleep(100); t += 100
-                    if (pm.isInteractive) { ok = true; break }
-                }
-                if (!ok) sebab = "layar masih mati setelah 2 dtk"
+                Thread.sleep(400)   // beri waktu peristiwa layar menyala
+                ok = pm.isInteractive
+                if (!ok) sebab = "layar masih mati setelah wakelock bangun"
             } else sebab = "PowerManager tidak tersedia"
         } else if (kode == 3 || kode == 4) {
             return aksiGlobal(if (kode == 3) "HOME" else "BACK").put("kode", kode)

@@ -61,3 +61,41 @@
 - Desain tangan aksesibilitas: `DESAIN-V4.1-TANGAN-AKSESIBILITAS.md`.
 - Protokol pohon + gestur: `15-pohon-ui-aksesibilitas/README.md`.
 - Presedensi tangan runner: `16-misi-ad-hoc/README.md`.
+
+## V4.2 (9 Okt 2026): prosedur install ulang pendamping + jebakan rish
+
+### Urutan install yang TERBUKTI (via rish/Shizuku, tanpa sentuhan pemilik)
+1. APK di-staging: scp ke HP `~/muse-droid/`, lalu
+   `rish -c 'cp /data/data/com.termux/files/home/muse-droid/v42f.apk /data/local/tmp/'`
+   (domain shell). JANGAN lewat /sdcard/Download untuk pm install (shell
+   tak selalu bisa membacanya — terbukti gagal senyap).
+2. `rish -c 'pm install /data/local/tmp/v42f.apk'`
+3. Jika paket lama di-uninstall dulu, setting aksesibilitas IKUT TERHAPUS:
+   `rish -c 'settings put secure enabled_accessibility_services id.musedroid.pendamping/id.musedroid.pendamping.LayananAkses'`
+   + `rish -c 'settings put secure accessibility_enabled 1'`
+4. `rish -c 'am start -n id.musedroid.pendamping/.MainActivity'` → tunggu
+   bind ±1 menit (19102 PING PONG; 19101 lazy ±30–60 dtk).
+5. `am start-foreground-service` dari shell SEBELUM MainActivity pernah
+   gagal "not found" — selalu lewati MainActivity dulu.
+
+### Jebakan rish (terbukti 9 Okt)
+- Output rish tertinggal SATU iterasi (buffer) — jangan percaya stdout
+  langsung; tulis ke berkas (`> /sdcard/Download/o.txt`) lalu baca via
+  Termux ssh, ATAU jalankan perintah dan verifikasi efeknya via jalur lain
+  (pm path via berkas, ps, socket probe).
+- `~` TIDAK di-expand di dalam `rish -c` — selalu path absolut
+  /data/data/com.termux/files/home/...
+- `am start` (shell) = SecurityException INJECT_EVENTS untuk keyevent, tapi
+  `input keyevent 26/224` VIA RISH (uid shell 2000) sah — shell punya
+  INJECT_EVENTS. Layar bangun tanpa Shizuku kini juga bisa via TOMBOL 224
+  di 19102 (wakelock ACQUIRE_CAUSES_WAKEUP, V4.2).
+- Jangan `pm uninstall` tanpa siap mengulang settings (langkah 3).
+- Binder Shizuku bisa stale ("Failed calling service package") setelah
+  uninstall; kill server (pid shizuku_server, owner shell) lalu minta
+  pemilik tekan "Mulai" di aplikasi Shizuku (pairing tersimpan).
+
+### Perintah baru server pohon 19102 (V4.2)
+TOMBOL <kode> → {"ok","kode","versi_sblm","versi_ssdh","naik","latensi_ms"}.
+224=wakeup (wakelock), 3=HOME/4=BACK (aksi global), lainnya ditolak jujur.
+Runner misi-ad-hoc (A1) mode pohon TIDAK lagi menjatuhkan dump/u2/rish —
+pohon satu-satunya tangan; gagal = berhenti jujur (grep "A1:" di kode).

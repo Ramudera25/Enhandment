@@ -39,3 +39,9 @@ lantai UiAutomation ±0,8 dtk per dump). Tuas berikutnya memang butir 3
 
 - `misi-cepat.py` — runner-nya (di HP: `~/muse-droid/misi-cepat.py`).
 - `misi-uji-standar.job` — misi benchmark (navigasi Pengaturan; aman).
+
+## ERA u2 — JANGAN dipakai saat pohon terikat (A4, 9 Okt 2026)
+misi-cepat.py bekerja lewat server u2/uiautomator; dump-nya MELEPAS
+ikatan pohon (LayananAkses). Runner sekarang MENOLAK jalan (exit 3,
+pesan "DITOLAK (A4)") bila 19102 menjawab PONG. Untuk misi saat pohon
+terikat: pakai misi-ad-hoc.py (advance/16, mode pohon).

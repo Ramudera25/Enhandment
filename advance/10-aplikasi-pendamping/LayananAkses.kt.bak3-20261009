@@ -21,11 +21,6 @@
 //                     balasan menunggu versi salinan NAIK (verifikasi
 //                     bawaan, batas 1,2 dtk) sebelum dikirim)
 //   GLOBAL BACK|HOME|RECENTS -> sama (performGlobalAction)
-//   TOMBOL <kode>  -> {"ok":bool,"kode":N,"versi_sblm":N,"versi_ssdh":N,
-//                     "naik":bool,"latensi_ms":N[, "sebab":"..."]}
-//                     V4.2: 224 (WAKEUP) via wakelock ACQUIRE_CAUSES_WAKEUP
-//                     (tanpa Shizuku/rish); 3 (HOME) & 4 (BACK) via aksi
-//                     global; kode lain jujur ditolak (butuh injeksi input).
 //
 // Aturan kebenaran (DESAIN-V3-POHON-UI.md §4): umur salinan selalu
 // dilaporkan; konsumen menolak jawaban basi untuk langkah pengubah layar;
@@ -42,7 +37,6 @@ import android.graphics.Rect
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.os.PowerManager
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -304,50 +298,6 @@ class LayananAkses : AccessibilityService() {
             .put("latensi_ms", SystemClock.uptimeMillis() - mulai)
     }
 
-    // B2 (spek bayu 9 Okt): keyevent tanpa injeksi input —
-    //  uid aplikasi TIDAK punya INJECT_EVENTS (keyevent shell = Security-
-    //  Exception, terbukti 9 Okt), tetapi wakelock ACQUIRE_CAUSES_WAKEUP
-    //  sah membangunkan layar (permission WAKE_LOCK biasa). 224 = bangun;
-    //  3/4 = aksi global layanan (HOME/BACK sudah ada); kode lain ditolak
-    //  jujur (butuh Shizuku). Balasan versi-gated seperti gestur.
-    fun tombolKode(kode: Int): JSONObject {
-        val out = JSONObject()
-        val versiSebelum = PohonUI.versi
-        val mulai = SystemClock.uptimeMillis()
-        var ok = false
-        var sebab = ""
-        if (kode == 224) {
-            val pm = getSystemService(PowerManager::class.java)
-            if (pm != null) {
-                @Suppress("DEPRECATION")
-                val wl = pm.newWakeLock(
-                    PowerManager.SCREEN_BRIGHT_WAKE_LOCK or
-                        PowerManager.ACQUIRE_CAUSES_WAKEUP or
-                        PowerManager.ON_AFTER_RELEASE, "musedroid:bangun")
-                wl.acquire(8000)
-                // Poll isInteractive sampai 2 dtk (terbukti 9 Okt: cek
-                // tunggal 400 ms prematur — layar bangun belakangan).
-                var t = 0
-                while (t < 2000) {
-                    Thread.sleep(100); t += 100
-                    if (pm.isInteractive) { ok = true; break }
-                }
-                if (!ok) sebab = "layar masih mati setelah 2 dtk"
-            } else sebab = "PowerManager tidak tersedia"
-        } else if (kode == 3 || kode == 4) {
-            return aksiGlobal(if (kode == 3) "HOME" else "BACK").put("kode", kode)
-        } else {
-            sebab = "keyevent $kode butuh injeksi input (Shizuku/rish) — " +
-                    "tidak tersedia dari layanan aksesibilitas"
-        }
-        val naik = tungguVersiNaik(versiSebelum)
-        out.put("ok", ok).put("kode", kode).put("versi_sblm", versiSebelum)
-            .put("versi_ssdh", PohonUI.versi).put("naik", naik)
-            .put("latensi_ms", SystemClock.uptimeMillis() - mulai)
-        if (sebab.isNotEmpty()) out.put("sebab", sebab)
-        return out
-    }
-
     // ---- penyaji socket 19102 ----
 
     private fun penyaji() {
@@ -433,17 +383,6 @@ class LayananAkses : AccessibilityService() {
             }
             "GLOBAL" -> (instans?.aksiGlobal(arg.trim().uppercase())
                 ?: JSONObject().put("ok", false).put("sebab", "layanan tidak aktif")).toString()
-            "TOMBOL" -> {
-                val kode = arg.trim().toIntOrNull()
-                val lay = instans
-                when {
-                    lay == null -> JSONObject().put("ok", false)
-                        .put("sebab", "layanan tidak aktif").toString()
-                    kode == null -> JSONObject().put("ok", false)
-                        .put("sebab", "format: TOMBOL <kode>").toString()
-                    else -> lay.tombolKode(kode).toString()
-                }
-            }
             else -> JSONObject().put("ok", false)
                 .put("sebab", "perintah tidak dikenal").toString()
         }

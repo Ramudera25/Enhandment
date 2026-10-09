@@ -505,3 +505,133 @@ berganti* dan keadaan barunya terverifikasi. Tangan kini tidak lagi
 bergantung pada Shizuku — kaki yang paling sering mati justru tidak
 lagi bisa melumpuhkan misi. Putusan: **LULUS — terbit sebagai
 V4.1.**
+
+## Hasil — patch latensi 9 Okt 2026
+
+Patch terpasang di HP (backup .bak-20261009): POLL_UBAH/POLL_TUNGGU
+0.15/0.25 → 0.02 dtk; poll basi 0.1 → 0.005; jeda IME/menu-tempel
+0.4–0.6 → 0.08 dtk; JEDA manual & tekan-lama 800 ms tidak diubah.
+Terukur (misi-uji-standar, log runner): langkah 1–5 = 17 dtk (8 Okt)
+→ **7 dtk** (9 Okt); TUNGGU_TEKS 6 ms; CEK_TEKS 7 ms (RTT pohon
+2–3 ms, poll rapat nyaris gratis).
+
+Benchmark 9 langkah penuh BELUM tercapai: layar HP mati di tengah
+misi (peristiwa berhenti, am start diblokir) + pohon 19102 lepas ikat
+di tengah misi; 2× ulang habis sesuai aturan → diparkir dengan
+sebab. Pemulihan pohon OTOMATIS ditemukan & terbukti: buka halaman
+detail aksesibilitas = rebind; toggle saklar utama Off→On = stabil
+(teruji lewat HOME + idle 10 dtk). ssh per-perintah 760 ms →
+ControlMaster ~250–360 ms (biaya fork Termux) → tetap 1× ssh per
+misi. Port-forward -L 19102 tidak diadopsi (idle di-RST).
+
+## Hasil — patch (2) JEDA manual & tekan-lama, 9 Okt 2026
+
+### Terbukti (jalankan nyata di HP, log di atas)
+- JEDA valid 0.1 dtk → OK 100 ms. JEDA 7 dtk → "dibatasi ke 5s (plafon)"
+  lalu BERES. JEDA abc → GAGAL jujur "durasi bukan angka".
+- TAHAN native pohon: balasan {"ok":true,"versi_sblm":8,"versi_ssdh":8,
+  "latensi_ms":1874} — gestur tekan-lama 650 ms terkirim & terverifikasi
+  versi. Kedua runner kini pakai TAHAN native (pohon) / longClick (u2);
+  geser diam 800 ms hanya cadangan.
+- Poll menu Tempel adaptif: 20 ms (mode pohon, RTT 2–3 ms) / 0.8 dtk
+  (mode dump), batas 0.6/4.0 dtk — menggantikan sleep 0.08 datar.
+
+### Diparkir dengan sebab (disiplin 2× ulang)
+- TEMPEL end-to-end (menu "Tempel" diketuk) TIDAK teruji hari ini:
+  layar HP mati di tengah uji → pohon beku di halaman lama, am start
+  tidak merender, input keyevent = SecurityException (Tanpa INJECT_
+  EVENTS), 19101 Shizuku mati = jalur wakeup habis. Pendamping TIDAK
+  punya WakeLock/setTurnScreenOn (cek grep: nol di semua .kt) →
+  Rekomendasi build berikutnya: tambahkan WakeLock parsial atau
+  setTurnScreenOn+showWhenLocked di LayananDepan, plus jalur TOMBOL
+  (keyevent) di server pohon 19102 agar wakeup tidak bergantung
+  Shizuku. Uji-tahan2.py (tersimpan) = harness pemulihan+uji.
+
+### Pelajaran probe
+- Gerbang umur (umur_ms<3000) SALAH untuk menunggu layar statis:
+  pohon tak menerima event saat layar mati, salinan membesar wajar.
+  Tunggu berbasis KONTEN node (uji-tahan2.py).
+- termux-clipboard-set terbukti mati di HP ini (set→get kosong; app
+  Termux:API tak terpasang) → TEMPEL selalu jatuh ke jalur tekan-lama;
+  chip-clipboard keyboard tetap jalur utama saat clipboard hidup.
+- input keyevent via Termux shell = SecurityException INJECT_EVENTS;
+  wakeup butuh 19101 (TOMBOL 224) atau layar sudah hidup.
+
+## Spesifikasi bayu 9 Okt — hasil A1–A5, B1–B4 (pengerjaan 9 Okt 2026)
+
+### A1 — runner tanpa jalur destruktif di mode pohon
+Kode: 22 guard di misi-ad-hoc.py (grep "A1:" semuanya). Audit menyeluruh:
+sisa panggilan dump/rish hanya dijalankan bila mode != pohon; probe u2/rish
+dilewati bila pohon hidup (aturan "jangan sentuh uiautomator saat terikat").
+_pohon() kini retry bertingkat 0,5/1/2/4 dtk; tetap diam = MisiGagal jujur.
+Run nyata: misi-uji-standar 9 Okt 10:40 — BUKA 3982 ms OK, pohon tetap
+HIDUP sesudah misi (PING v894). Langkah 9/9: DIPARKIR (layar mati episode,
+lihat A5). md5 HP=VM=repo: 7ade7a7067210cdcec30b2e398ccdb15.
+
+### A2 — BUKA menunggu paket+simpul (konten, bukan umur)
+tunggu_simpul_awal(30) terpasang (grep A2). Run nyata: BUKA
+android.settings.WIFI_SETTINGS = 3982 ms, tanpa status "pohon tidak
+menjawab", tanpa pergantian mode. LULUS.
+
+### A3 — berkas .hasil tiap run
+log/uji-jeda-valid-20261009-103931.hasil (BERES) dan
+log/uji-gagal-20261009-103957.hasil (GAGAL langkah 2 TUNGGU_TEKS
+"ZZZ-TAK-ADA-XYZ" timeout 2d) — dua-duanya terbaca di HP. LULUS.
+
+### A4 — misi-cepat ERA u2 (opsi a: label + penolakan)
+Header misi-cepat.py "ERA u2 — JANGAN dipakai saat pohon terikat" +
+cek awal PING 19102 → exit 3. Uji nyata saat pohon v889 terikat:
+"DITOLAK (A4)... pakai misi-ad-hoc.py", exit=3 (log sesi 10:39).
+README advance/11 diperbarui. md5: bd1b4450dc6fb78e7bcef9ba84989b63
+(HP = VM = repo). LULUS.
+
+### A5 — TEMPEL end-to-end: DIPARKIR
+Rantai clipboard HP ini mati semua (bukti 9 Okt): termux-clipboard-set
+set→get kosong (app Termux:API tak ada); `cmd clipboard` = "No shell
+command implementation" (build Samsung); Android 10+ melarang set
+clipboard dari latar. TEMPEL tanpa isi clipboard tidak mungkin —
+perlu sentuhan pengguna atau jalur ISI pohon (ISI_TEKS). Uji berakhir
+dipotong HP offline ±11:22 (Tailscale lost, 100% packet loss).
+
+### B1 — WakeLock + jaga layar (LayananDepan) — kode masuk, uji parsial
+Bukti dumpsys power (via rish, 11:14): "ACQ musedroid:jangkar (partial)"
+dan "ACQ musedroid:layar (screen-bright,on-after-release)" + REL bersih
+saat berhenti; layar tidak mati karena timeout selama uji. Uji "misi
+5 menit setelah layar dimatikan manual": BELUM dijalankan (layar kumat
+bukan skenario uji yang sempat jalan; HP offline sesudahnya).
+
+### B2 — TOMBOL di 19102: TERBUKTI MEMBANGUNKAN LAYAR
+Layar dimatikan manual (input keyevent 26 via rish → mWakefulness=Dozing)
+→ TOMBOL 224 via socket 19102 (tanpa rish pada jalur bangun) →
+mWakefulness=Awake + pohon merender konten (v36, 11 node). Balasan
+awal ok=false karena cek isInteractive tunggal 400 ms prematur —
+sudah diperbaiki di source (poll 2 dtk), re-test tertunda HP offline.
+Screenshot bukti belum diambil (FOTO diblokir disiplin A1 mode pohon).
+224 wakelock ACQUIRE_CAUSES_WAKEUP sah (WAKE_LOCK); 3/4 = aksi global;
+kode lain ditolak jujur (butuh injeksi).
+
+### B3 — PING tak antre di belakang POHON — DESAIN SUDAH, UJI TERUKUR BELUM
+penyaji() membuat thread per koneksi (jawab() bekerja pada salinan
+@Volatile — PING tidak bisa mengantre di belakang POHON). Uji 20× PING
+median <100 ms: belum dijalankan (HP offline sebelum sempat).
+
+### B4 — LayananDepan menempel: LULUS di install pertama, final tertunda
+Install pertama V4.2 (11:14): dumpsys activity services →
+LayananDepan/LayananLokal/LayananAkses app=ProcessRecord{19727...};
+19101 PONG hidup. Catatan: peluncuran FGS dari shell SEBELUM MainActivity
+pernah gagal ("not found" setelah force-stop); urutan yang terbukti:
+settings put secure (2 baris) → am start MainActivity → tunggu bind
+(±1 menit, Shizuku UserService lazy). Reinstall final (sha256
+e3e5e327...) belum selesai: uninstall sukses, install senyap gagal
+(pitfall rish: output buffer satu iterasi + `~` tak di-expand), lalu
+binder Shizuku stale → server dimatikan untuk restart → HP offline.
+KEADAAN HP TERAKHIR: pendamping TIDAK terpasang, setting aksesibilitas
+dihapus, server Shizuku mati — perlu: tekan "Mulai" di aplikasi Shizuku
+(pairing tersimpan), lalu install v42f.apk (md5 3375c39fef6cfd55048911
+f8d899c7d5) + settings + MainActivity (prosedur di WORKFLOW-MISI-HP.md).
+
+### B5 — versi
+Kode V4.2 (manifest --version-code 42 --version-name 4.2) terbuild
+(2.396.628 byte; sha256 APK pertama 8a0fe843..., final e3e5e327...).
+Tag V4.2 BELUM dipasang sesuai aturan proyek: B3 belum teruji terukur,
+reinstall final tertunda.
