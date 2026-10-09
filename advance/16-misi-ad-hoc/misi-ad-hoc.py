@@ -901,11 +901,16 @@ class Runner:
                     self.versi = v
         except Exception:
             self.pohon_hidup = False
-        try:
-            self.klien.dump()
-            self.u2_hidup = True
-        except Exception:
-            self.u2_hidup = False
+        # Patch A1: server u2 TIDAK disentuh saat pohon terikat (aturan
+        # bayu: uiautomator melepas ikatan pohon). Probe u2/rish hanya
+        # bila pohon memang tidak hidup (pemilihan mode).
+        self.u2_hidup = False
+        if not self.pohon_hidup:
+            try:
+                self.klien.dump()
+                self.u2_hidup = True
+            except Exception:
+                self.u2_hidup = False
         if self.pohon_hidup:
             self.mode = "pohon"
         elif self.u2_hidup:
