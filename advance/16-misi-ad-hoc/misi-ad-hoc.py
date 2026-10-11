@@ -54,6 +54,31 @@
 # Pakai (di Termux HP):  python3 misi-ad-hoc.py <berkas.job>
 # Kebutuhan: server pohon pendamping (19102) dan/atau server u2 (9008);
 # jembatan darurat: rish/Shizuku hidup.
+#
+# FORMAT MISI V2 (DESAIN-PENGAWAS-MISI.md, 11 Okt 2026) — semua opsional;
+# misi tanpa klausa baru berjalan persis seperti v1:
+#   VERIFIKASI <jenis> <arg> [LEMBUT]
+#       Klausa pasca-aksi; menempel pada langkah aksi SEBELUMNYA dan
+#       dibuktikan dari lapisan observasi mode yang berjalan.
+#       jenis: TEKS_ADA "teks" | TEKS_TIDAK_ADA "teks" | PAKET paket |
+#              BACA_ADA "teks" (OCR perintah BACA 19102 — mode pohon
+#              saja; MAHAL: 19–40 dtk di perangkat, timeout klausa 120
+#              dtk) | HALAMAN "jangkar" (teks identitas halaman).
+#       Hasil dicatat sebagai baris BUKTI {aksi_ok, verifikasi_ok,
+#       bukti}. Gagal = misi berhenti di langkah itu juga — TANPA
+#       coba-ulang buta, TANPA turun kelas ke dump/u2. LEMBUT = gagal
+#       hanya dicatat sebagai PERINGATAN, misi lanjut.
+#   ANGGARAN <maks_langkah> <maks_detik>
+#       Direktif header. Bawaan: 2x jumlah langkah aksi dan 900 dtk.
+#       Terlampaui = berhenti + laporan keadaan (paket depan, versi).
+#   KARTU APLIKASI (advance/08-pengetahuan/kartu/<paket>.md):
+#       Pada langkah BUKA/BUKA_APLIKASI kartu paket dimuat (urutan
+#       cari: $MUSE_KARTU_DIR, ./kartu di sebelah runner,
+#       ../08-pengetahuan/kartu, ~/muse-droid/kartu). Jangkar halaman
+#       pertama kartu menjadi VERIFIKASI bawaan langkah BUKA.
+#       Prakondisi "dinginkan" TIDAK dijalankan runner (tidak ada
+#       mekanisme force-stop; A1 melarang jalur rish di mode pohon) —
+#       dicatat PERINGATAN agar agen yang memutuskan.
 
 import http.client
 import json
@@ -190,6 +215,34 @@ class KlienPohon:
                 if percobaan == 2:
                     raise
 
+    def baca(self, timeout=120):
+        """Perintah BACA (V4.4) lewat koneksi KHUSUS: balasan = satu
+        baris header JSON lalu baris-baris TSV "teks<TAB>kotak<TAB>skor"
+        sampai server MENUTUP koneksi. Satu percobaan saja, tanpa
+        coba-ulang: BACA menjalankan OCR penuh di perangkat (19–40 dtk
+        terukur) — mengulang = membayar OCR dua kali untuk bukti yang
+        sama. -> (header dict, [baris TSV mentah])."""
+        sock = socket.create_connection((POHON_HOST, POHON_PORT),
+                                        timeout=timeout)
+        try:
+            sock.sendall(b"BACA\n")
+            f = sock.makefile("rb")
+            mentah = f.readline()
+            if not mentah:
+                raise IOError("BACA: server menutup tanpa header")
+            header = json.loads(mentah.decode("utf-8"))
+            baris = []
+            for sisa in f:
+                s = sisa.decode("utf-8", "replace").rstrip("\r\n")
+                if s:
+                    baris.append(s)
+            return header, baris
+        finally:
+            try:
+                sock.close()
+            except Exception:
+                pass
+
 
 def rish(perintah):
     import os
@@ -253,6 +306,8 @@ class Runner:
         self.buta_pertama = True   # langkah buta pertama dikonfirmasi dump
         self.xml_terakhir = ""
         self.t_xml = 0.0
+        self.anggaran_langkah = None  # format v2: dari ANGGARAN / bawaan
+        self.anggaran_detik = None
 
     # -- infrastruktur -------------------------------------------------
     def catat(self, status, pesan):
@@ -881,6 +936,210 @@ class Runner:
             raise MisiGagal("TEMPEL tidak terbukti tampil di layar (%s)" % cara)
         return cara
 
+    # -- pengawas misi: verifikasi, kartu, anggaran (format v2) ------------
+    @staticmethod
+    def _urai_verifikasi(sisa):
+        """'TEKS_ADA "teks" [LEMBUT]' -> {jenis, arg, lembut, dari_kartu}.
+        Jenis: TEKS_ADA | TEKS_TIDAK_ADA | PAKET | BACA_ADA | HALAMAN."""
+        jenis, _, ekor = sisa.partition(" ")
+        jenis = jenis.strip().upper()
+        ekor = ekor.strip()
+        if jenis not in ("TEKS_ADA", "TEKS_TIDAK_ADA", "PAKET",
+                         "BACA_ADA", "HALAMAN"):
+            raise MisiGagal("VERIFIKASI: jenis tidak dikenal: %s" % jenis)
+        lembut = False
+        if ekor.upper().endswith("LEMBUT") and \
+                (len(ekor) == 6 or ekor[-7] == " "):
+            lembut = True
+            ekor = ekor[:-6].strip()
+        if ekor.startswith('"'):
+            m = re.match(r'"([^"]*)"', ekor)
+            if not m:
+                raise MisiGagal("VERIFIKASI %s: argumen berkutip rusak"
+                                % jenis)
+            arg = m.group(1)
+        else:
+            bagian = ekor.split()
+            arg = bagian[0] if bagian else ""
+        if not arg:
+            raise MisiGagal("VERIFIKASI %s: argumen kosong" % jenis)
+        return {"jenis": jenis, "arg": arg, "lembut": lembut,
+                "dari_kartu": False}
+
+    @staticmethod
+    def _nama_klausa(klausa):
+        if klausa["jenis"] == "PAKET":
+            dasar = "PAKET %s" % klausa["arg"]
+        else:
+            dasar = '%s "%s"' % (klausa["jenis"], klausa["arg"])
+        return dasar + (" (kartu)" if klausa.get("dari_kartu") else "")
+
+    def _teks_ada(self, teks):
+        """-> (ada, bukti) dari lapisan observasi mode yang berjalan.
+        Mode pohon: TEKS? dengan disiplin basi + gerbang versi yang sama
+        seperti cek_teks. Mode lain: dump memang lapisannya sendiri."""
+        if self.mode == "pohon":
+            bukti = {"sumber": "pohon"}
+            for _ in range(COBA_BASI):
+                j = self._pohon("TEKS? " + teks)
+                if j is None:
+                    bukti["sebab"] = "pohon tidak menjawab"
+                    return False, bukti
+                bukti.update({"versi": j.get("versi"),
+                              "umur_ms": j.get("umur_ms")})
+                if j.get("umur_ms", 10 ** 9) > BATAS_UMUR_MS:
+                    time.sleep(0.005)  # basi -> poll rapat 5 ms
+                    continue
+                v = j.get("versi")
+                if self.gerbang_versi is not None and \
+                        not (v is not None and v > self.gerbang_versi):
+                    time.sleep(0.005)  # salinan pra-ketuk -> poll rapat
+                    continue
+                if j.get("ada"):
+                    self.gerbang_versi = None
+                return bool(j.get("ada")), bukti
+            bukti["sebab"] = ("salinan pohon basi / versi belum "
+                              "melampaui gerbang")
+            return False, bukti
+        try:
+            return teks in self.dump(paksa=True), {"sumber": "dump"}
+        except Exception as e:
+            return False, {"sumber": "dump", "sebab": str(e)[:80]}
+
+    def _jalankan_verifikasi(self, klausa):
+        """Satu klausa VERIFIKASI -> (ok, bukti dict). Kegagalan adalah
+        HASIL, bukan perkecualian: pemanggil yang memutuskan berhenti
+        atau (bila LEMBUT) mencatat peringatan. Tanpa coba-ulang buta,
+        tanpa turun kelas — bukti hanya dari mode yang berjalan."""
+        jenis, arg = klausa["jenis"], klausa["arg"]
+        if jenis == "PAKET":
+            try:
+                aktual = self.paket_depan()
+            except Exception as e:
+                return False, {"diharapkan": arg, "sebab": str(e)[:80]}
+            return aktual == arg, {"paket_depan": aktual,
+                                   "diharapkan": arg}
+        if jenis == "BACA_ADA":
+            if self.mode != "pohon":
+                return False, {"sebab": "BACA hanya tersedia di mode "
+                                         "pohon"}
+            t0 = time.time()
+            try:
+                header, baris_ocr = self.pohon.baca(timeout=120)
+            except Exception as e:
+                return False, {"sebab": "BACA gagal: %s" % str(e)[:80]}
+            cocok = None
+            for b in baris_ocr:
+                if arg in b.split("\t")[0]:
+                    cocok = b
+                    break
+            bukti = {"sumber": "BACA/OCR perangkat",
+                     "latensi_verifikasi_dtk":
+                         round(time.time() - t0, 1),
+                     "catatan": "OCR di perangkat lambat (19-40 dtk "
+                                "terukur 11 Okt 2026) — klausa ini mahal",
+                     "jumlah_baris": header.get("jumlah_baris"),
+                     "baris_cocok": cocok}
+            return bool(header.get("ok")) and cocok is not None, bukti
+        ada, bukti = self._teks_ada(arg)
+        if jenis == "HALAMAN":
+            bukti["jenis"] = "halaman"
+        if jenis == "TEKS_TIDAK_ADA":
+            return (not ada), bukti
+        return ada, bukti
+
+    def _jalur_kartu(self, paket):
+        import os
+        nama = paket + ".md"
+        calon = []
+        env = os.environ.get("MUSE_KARTU_DIR")
+        if env:
+            calon.append(os.path.join(env, nama))
+        sini = os.path.dirname(os.path.abspath(__file__))
+        calon.append(os.path.join(sini, "kartu", nama))
+        calon.append(os.path.join(sini, "..", "08-pengetahuan",
+                                  "kartu", nama))
+        calon.append(os.path.expanduser(
+            os.path.join("~", "muse-droid", "kartu", nama)))
+        for c in calon:
+            if os.path.isfile(c):
+                return c
+        return None
+
+    def _muat_kartu(self, paket):
+        """Urai kartu <paket>.md -> {jangkar, dinginkan, jalur, basi}
+        atau None bila tidak ada. Format yang diurai: baris
+        'verifikasi terakhir: YYYY-MM-DD', seksi '## Jangkar halaman'
+        (butir '- nama: "teks"' — urutan berkas; yang pertama dipakai
+        langkah BUKA), dan seksi '## Prakondisi' (kata 'dinginkan')."""
+        jalur = self._jalur_kartu(paket)
+        if jalur is None:
+            return None
+        try:
+            isi = open(jalur, encoding="utf-8").read()
+        except Exception:
+            return None
+        kartu = {"jangkar": [], "dinginkan": False, "jalur": jalur,
+                 "basi": False}
+        bagian = None
+        for b in isi.splitlines():
+            if b.startswith("## "):
+                bagian = b[3:].strip().lower()
+                continue
+            m = re.match(r"verifikasi terakhir:\s*(\d{4})-(\d{2})-(\d{2})",
+                         b.strip())
+            if m:
+                import datetime
+                try:
+                    tgl = datetime.date(int(m.group(1)), int(m.group(2)),
+                                        int(m.group(3)))
+                    if (datetime.date.today() - tgl).days > 30:
+                        kartu["basi"] = True
+                except ValueError:
+                    pass
+                continue
+            if bagian == "jangkar halaman" and b.lstrip().startswith("-"):
+                m2 = re.search(r'"([^"]+)"', b)
+                if m2:
+                    kartu["jangkar"].append(m2.group(1))
+            elif bagian == "prakondisi" and "dinginkan" in b.lower():
+                kartu["dinginkan"] = True
+        return kartu
+
+    def _siapkan_kartu(self, paket):
+        """Muat kartu untuk langkah BUKA + catat keadaan pentingnya.
+        Prakondisi 'dinginkan' TIDAK dijalankan: runner tidak punya
+        mekanisme force-stop (mode pohon melarang jalur rish — A1;
+        shell Termux tidak berhak force-stop paket lain). Desain
+        meminta kartu MENANDAI, bukan diam-diam dipercaya/diabaikan —
+        maka dicatat PERINGATAN dan agen yang memutuskan."""
+        kartu = self._muat_kartu(paket)
+        if kartu is None:
+            return None
+        self.catat("INFO", "kartu %s dimuat: %s" % (paket, kartu["jalur"]))
+        if kartu["basi"]:
+            self.catat("PERINGATAN", "kartu %s BASI (verifikasi terakhir "
+                                     "> 30 hari lalu) — jangkar tetap "
+                                     "dipakai tapi ditandai" % paket)
+        if kartu["dinginkan"]:
+            self.catat("PERINGATAN", "kartu %s: prakondisi 'dinginkan' "
+                                     "tercatat — runner tidak punya "
+                                     "mekanisme force-stop, TIDAK "
+                                     "dijalankan; pastikan aplikasi "
+                                     "sudah dingin atau terima risiko "
+                                     "jebakan BUKA" % paket)
+        return kartu
+
+    def _laporan_anggaran(self, sebab):
+        try:
+            pkt = self.paket_depan() or "?"
+        except Exception:
+            pkt = "?"
+        self.catat("GAGAL", "ANGGARAN terlampaui: %s — misi dihentikan. "
+                            "keadaan terakhir: paket depan=%s, versi "
+                            "pohon=%s, mode=%s"
+                   % (sebab, pkt, self.versi, self.mode))
+
     # -- mesin utama ---------------------------------------------------------
     def jalankan(self, path):
         # Patch A3 (spek bayu 9 Okt): berkas .hasil dibuat di AWAL run —
@@ -932,8 +1191,11 @@ class Runner:
         self.catat("MULAI", "tugas: %s (mode %s, tangan %s%s)" % (
             path, self.mode, self.tangan,
             ", pohon v%s" % self.versi if self.mode == "pohon" else ""))
-        t_misi = time.time()
-        langkah = 0
+        # --- urai berkas misi (format v2) --------------------------------
+        # TARGET/ANGGARAN = direktif, bukan langkah. VERIFIKASI menempel
+        # pada langkah aksi SEBELUMNYA. Misi tanpa keduanya = v1 murni:
+        # daftar langkah + perilaku persis seperti sebelumnya.
+        langkah_aksi = []
         for baris in open(path, encoding="utf-8"):
             baris = baris.rstrip("\n").rstrip("\r")
             if not baris or baris.startswith("#"):
@@ -942,10 +1204,71 @@ class Runner:
                 self.target = baris.split(None, 1)[1].strip()
                 self.catat("INFO", "target misi: %s" % self.target)
                 continue
-            langkah += 1
+            if baris.startswith("ANGGARAN"):
+                bagian = baris.split()
+                try:
+                    self.anggaran_langkah = int(bagian[1])
+                    self.anggaran_detik = int(bagian[2])
+                except (IndexError, ValueError):
+                    self.catat("GAGAL", "ANGGARAN tidak valid: %s — misi "
+                                        "dihentikan." % baris)
+                    return 1
+                self.catat("INFO", "anggaran misi: maks %d langkah, "
+                                   "%d dtk" % (self.anggaran_langkah,
+                                               self.anggaran_detik))
+                continue
+            if baris.startswith("VERIFIKASI"):
+                if not langkah_aksi:
+                    self.catat("GAGAL", "VERIFIKASI tanpa langkah aksi "
+                                        "sebelumnya: %s — misi "
+                                        "dihentikan." % baris)
+                    return 1
+                try:
+                    klausa = self._urai_verifikasi(
+                        baris.split(None, 1)[1])
+                except MisiGagal as g:
+                    self.catat("GAGAL", "%s — misi dihentikan." % g)
+                    return 1
+                langkah_aksi[-1]["verifikasi"].append(klausa)
+                continue
             cmd, _, sisa = baris.partition(" ")
-            sisa = sisa.strip()
+            langkah_aksi.append({"cmd": cmd, "sisa": sisa.strip(),
+                                 "verifikasi": []})
+        if self.anggaran_langkah is None:
+            self.anggaran_langkah = 2 * len(langkah_aksi)
+        if self.anggaran_detik is None:
+            self.anggaran_detik = 900
+        t_misi = time.time()
+        langkah = 0
+        for item in langkah_aksi:
+            cmd, sisa = item["cmd"], item["sisa"]
+            # Gerbang anggaran: diperiksa SEBELUM langkah dijalankan —
+            # misi yang melampaui anggaran berhenti dengan laporan
+            # keadaan, tidak mengembara.
+            if langkah + 1 > self.anggaran_langkah:
+                self._laporan_anggaran(
+                    "langkah ke-%d melampaui maks %d langkah"
+                    % (langkah + 1, self.anggaran_langkah))
+                return 1
+            if time.time() - t_misi > self.anggaran_detik:
+                self._laporan_anggaran(
+                    "durasi %.0f dtk melampaui maks %d dtk"
+                    % (time.time() - t_misi, self.anggaran_detik))
+                return 1
+            langkah += 1
             t0 = time.time()
+            # Kartu aplikasi pada langkah BUKA: dimuat sebelum aksi;
+            # jangkar pertamanya diverifikasi sesudah aksi (di bawah).
+            kartu_buka = None
+            if cmd in ("BUKA", "BUKA_APLIKASI"):
+                if cmd == "BUKA_APLIKASI":
+                    paket_buka = sisa.split()[0] if sisa else ""
+                elif "/" in sisa:
+                    paket_buka = sisa.split("/")[0]
+                else:
+                    paket_buka = self.target
+                if paket_buka:
+                    kartu_buka = self._siapkan_kartu(paket_buka)
             try:
                 if cmd == "BUKA_APLIKASI":
                     ket = self.buka_aplikasi(sisa)
@@ -1018,6 +1341,41 @@ class Runner:
                 return 1
             self.catat("OK", "%d %s %s (%d ms)" % (langkah, cmd, ket,
                                                   (time.time() - t0) * 1000))
+            # Verifikasi pasca-aksi (format v2): jangkar kartu BUKA
+            # lebih dulu, lalu klausa tertulis pada langkah ini. Setiap
+            # klausa meninggalkan baris BUKTI; gagal keras = berhenti
+            # TEPAT di langkah ini (tanpa coba-ulang, tanpa turun
+            # kelas); LEMBUT = PERINGATAN saja, misi lanjut.
+            klausa_semua = []
+            if kartu_buka and kartu_buka.get("jangkar"):
+                klausa_semua.append({"jenis": "HALAMAN",
+                                     "arg": kartu_buka["jangkar"][0],
+                                     "lembut": False, "dari_kartu": True})
+            klausa_semua.extend(item["verifikasi"])
+            for klausa in klausa_semua:
+                try:
+                    ok_v, bukti = self._jalankan_verifikasi(klausa)
+                except MisiGagal as g:
+                    ok_v, bukti = False, {"sebab": str(g)[:160]}
+                bukti["aksi_ok"] = True
+                bukti["verifikasi_ok"] = ok_v
+                self.catat("BUKTI", "langkah %d VERIFIKASI %s -> %s: %s"
+                           % (langkah, self._nama_klausa(klausa),
+                              "ok" if ok_v else "GAGAL",
+                              json.dumps(bukti, ensure_ascii=False)))
+                if ok_v:
+                    continue
+                if klausa["lembut"]:
+                    self.catat("PERINGATAN", "langkah %d: VERIFIKASI %s "
+                               "gagal tapi LEMBUT — dicatat, misi lanjut"
+                               % (langkah, self._nama_klausa(klausa)))
+                    continue
+                self.catat("GAGAL", "langkah %d: VERIFIKASI %s GAGAL — "
+                           "misi dihentikan (tanpa coba-ulang, tanpa "
+                           "turun kelas). bukti: %s"
+                           % (langkah, self._nama_klausa(klausa),
+                              json.dumps(bukti, ensure_ascii=False)))
+                return 1
         self.catat("BERES", "tugas selesai: %s (%d langkah, total %.2f dtk, "
                             "mode %s, tangan %s)"
                    % (path, langkah, time.time() - t_misi, self.mode, self.tangan))

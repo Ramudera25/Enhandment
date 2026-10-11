@@ -4,13 +4,20 @@
 # koreksi spec 9 Okt (TEMPEL terbukti tidak punya toolbar tempel di
 # formulir ini — vonis perangkat 9 Okt; TEMPEL tetap ada untuk
 # formulir yang memang menampilkannya); tidak mengubah data).
+# 11 Okt 2026: klausa VERIFIKASI (format v2, DESAIN-PENGAWAS-MISI)
+# ditambahkan pada semua langkah pengubah layar — aksi tidak diubah.
 TARGET com.android.settings
 BUKA android.settings.WIFI_SETTINGS
+VERIFIKASI TEKS_ADA "Add network"
 TUNGGU_TEKS "Add network" 20
 KETUK_TEKS "Add network"
+VERIFIKASI TEKS_ADA "Network name"
 TUNGGU_TEKS "Network name" 20
 CEK_TEKS "Network name"
 ISI_TEKS "MUSEUJI"
+VERIFIKASI TEKS_ADA "MUSEUJI"
 CEK_TEKS "MUSEUJI"
 TOMBOL back
+VERIFIKASI TEKS_ADA "Add network"
 TOMBOL back
+VERIFIKASI TEKS_TIDAK_ADA "Add network"
