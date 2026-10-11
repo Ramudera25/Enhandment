@@ -24,7 +24,7 @@
 *ABSOLUTE CINEMA — HP-nya kerja sendiri, kamu tinggal angkat tangan.*
 
 ![status](https://img.shields.io/badge/status-terverifikasi%20di%20perangkat%20nyata-brightgreen)
-![versi](https://img.shields.io/badge/versi-V4.1-blueviolet)
+![versi](https://img.shields.io/badge/versi-V4.4.1-blueviolet)
 ![root](https://img.shields.io/badge/root-tidak%20perlu-blue)
 ![bahasa](https://img.shields.io/badge/bahasa-Indonesia-orange)
 ![lisensi](https://img.shields.io/badge/lisensi-MIT-lightgrey)
@@ -108,6 +108,12 @@ shell itu bisa:
 AI agent (Muse, Hermes, OpenCode, dan sejenisnya) cukup disambungkan ke shell itu —
 lewat SSH + Shizuku, lewat ADB dari komputer, atau jalur lain — dan ia bisa mengoperasikan
 hampir semua aplikasi seperti kamu, hanya saja tidak pakai jempol.
+
+> **Operator sistem terkini (V4.4.1 — pohon aksesibilitas sebagai tangan utama)?**
+> Pintu masukmu adalah [advance/MULAI-DARI-SINI.md](advance/MULAI-DARI-SINI.md):
+> peta satu menit, prasyarat, cara menjalankan misi, aturan keras, dan blok
+> instruksi tempel untuk agen AI lain. Cerita di README ini adalah latar
+> sejarahnya; dokumen itulah keadaan operasinya hari ini.
 
 ## Buat siapa ini cocok?
 
