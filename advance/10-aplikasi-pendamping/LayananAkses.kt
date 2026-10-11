@@ -29,6 +29,17 @@
 //   AMBIL         -> sama, tapi selalu dari buffer tangkapan terakhir
 //                     (buffer terisi oleh BINGKAI atau tangkap otomatis
 //                     saat paket depan berganti aplikasi)
+//   BACA [ambang] [STATUSBAR]
+//                  -> header JSON {"ok":bool,"versi_bingkai":N,
+//                     "latensi_ms":N,"jumlah_baris":N} DIIKUTI baris-baris
+//                     "teks<TAB>x1,y1,x2,y2<TAB>skor" sampai koneksi
+//                     ditutup (V4.4 "Mata Baca": OCR di perangkat atas
+//                     bingkai segar, model PP-OCRv5 via ONNX Runtime —
+//                     lihat OcrBaca.kt; penasihat saja, pohon tetap
+//                     hakim. Penyaring positif-palsu v1: baris simbol
+//                     <=2 karakter dibuang; pita status bar diabaikan
+//                     kecuali token STATUSBAR diberikan; gerbang
+//                     baterai <30% tanpa cas menolak OCR jalan)
 //   TOMBOL <kode>  -> {"ok":bool,"kode":N,"versi_sblm":N,"versi_ssdh":N,
 //                     "naik":bool,"latensi_ms":N[, "sebab":"..."]}
 //                     V4.2: 224 (WAKEUP) via wakelock ACQUIRE_CAUSES_WAKEUP
@@ -496,6 +507,106 @@ class LayananAkses : AccessibilityService() {
             .put("umur_bingkai_ms", 0).put("byte", png.size), png)
     }
 
+    // ---- mata baca (V4.4) ----
+    // OCR di perangkat atas bingkai segar (mekanisme tangkap sama
+    // persis seperti BINGKAI). Balasan satu string multi-baris:
+    // header JSON lalu satu baris per teks hasil saring:
+    // "teks<TAB>x1,y1,x2,y2<TAB>skor". Argumen opsional pada perintah:
+    // ambang skor (bawaan 0,5 — sama text_score RapidOCR prototipe)
+    // dan token STATUSBAR untuk menyertakan pita status bar.
+
+    fun bacaLayar(perintah: String): String {
+        val mulai = SystemClock.uptimeMillis()
+        fun gagal(sebab: String): String {
+            return JSONObject().put("ok", false).put("sebab", sebab)
+                .put("versi_bingkai", PohonUI.bingkaiVersi)
+                .put("latensi_ms", SystemClock.uptimeMillis() - mulai)
+                .put("jumlah_baris", 0).toString()
+        }
+        // Gerbang baterai (pengaman desain Mata): OCR ditahan di
+        // bawah 30% tanpa cas. Kegagalan membaca status baterai
+        // tidak menghalangi (gagal-aman ke lanjut).
+        try {
+            val bm = getSystemService(android.os.BatteryManager::class.java)
+            if (bm != null && Build.VERSION.SDK_INT >= 26) {
+                val level = bm.getIntProperty(
+                    android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
+                val status = bm.getIntProperty(
+                    android.os.BatteryManager.BATTERY_PROPERTY_STATUS)
+                val ngecas = status ==
+                    android.os.BatteryManager.BATTERY_STATUS_CHARGING ||
+                    status == android.os.BatteryManager.BATTERY_STATUS_FULL
+                if (level in 0..29 && !ngecas) {
+                    return gagal(
+                        "baterai $level% (<30%) tanpa cas — OCR ditahan")
+                }
+            }
+        } catch (e: Throwable) { /* lanjut */ }
+        var ambang = 0.5f
+        var sertakanStatusBar = false
+        val token = perintah.trim().split(Regex("\\s+"))
+        for (t in token.drop(1)) {
+            val f = t.toFloatOrNull()
+            if (f != null) ambang = f.coerceIn(0f, 1f)
+            else if (t.equals("STATUSBAR", ignoreCase = true)) {
+                sertakanStatusBar = true
+            }
+        }
+        val hasil = bingkai(true)
+        val pngMentah = hasil.png
+        if (!hasil.json.optBoolean("ok") || pngMentah == null) {
+            return gagal(hasil.json.optString("sebab", "tangkapan gagal"))
+        }
+        val bmp = try {
+            android.graphics.BitmapFactory.decodeByteArray(
+                pngMentah, 0, pngMentah.size)
+        } catch (e: Exception) { null }
+            ?: return gagal("bingkai tidak bisa di-decode")
+        val mentah = try {
+            MesinOcr.baca(applicationContext, bmp, ambang)
+        } catch (e: Exception) {
+            try { bmp.recycle() } catch (x: Exception) { }
+            return gagal("OCR galat: " + (e.message ?: e.javaClass.simpleName))
+        }
+        // Penyaring positif-palsu v1 (desain butir 5): (a) baris yang
+        // hanya berisi simbol dengan panjang <=2 karakter dibuang;
+        // (b) baris yang pusatnya berada di pita status bar dibuang
+        // kecuali STATUSBAR diminta eksplisit.
+        val strip = tinggiStatusBar(bmp.height)
+        val bersih = mentah.filter { b ->
+            val t = b.teks.trim()
+            val simbolSaja = t.length <= 2 && t.none { it.isLetterOrDigit() }
+            val diStatusBar = !sertakanStatusBar && (b.y1 + b.y2) / 2 < strip
+            !simbolSaja && !diStatusBar
+        }
+        try { bmp.recycle() } catch (e: Exception) { }
+        val sb = StringBuilder()
+        sb.append(JSONObject().put("ok", true)
+            .put("versi_bingkai", PohonUI.bingkaiVersi)
+            .put("latensi_ms", SystemClock.uptimeMillis() - mulai)
+            .put("jumlah_baris", bersih.size).toString())
+        for (b in bersih) {
+            val teksAman = b.teks.replace('\t', ' ').replace('\n', ' ')
+                .replace('\r', ' ')
+            sb.append('\n').append(teksAman).append('\t')
+                .append(b.x1).append(',').append(b.y1).append(',')
+                .append(b.x2).append(',').append(b.y2).append('\t')
+                .append(String.format(java.util.Locale.US, "%.3f", b.skor))
+        }
+        return sb.toString()
+    }
+
+    private fun tinggiStatusBar(tinggiBingkai: Int): Int {
+        return try {
+            val id = resources.getIdentifier(
+                "status_bar_height", "dimen", "android")
+            if (id > 0) resources.getDimensionPixelSize(id)
+            else (tinggiBingkai * 0.04).toInt()
+        } catch (e: Exception) {
+            (tinggiBingkai * 0.04).toInt()
+        }
+    }
+
     // ---- penyaji socket 19102 ----
 
     private fun penyaji() {
@@ -510,11 +621,15 @@ class LayananAkses : AccessibilityService() {
                             val keluar = PrintWriter(it.getOutputStream(), true)
                             val perintah = masuk.readLine() ?: return@thread
                             val kataAwal = perintah.substringBefore(' ').trim().uppercase()
-                            if (kataAwal == "BINGKAI" || kataAwal == "AMBIL") {
+                            if (kataAwal == "BINGKAI" || kataAwal == "AMBIL" ||
+                                kataAwal == "BACA") {
                                 val lay = instans
                                 if (lay == null) {
                                     keluar.println(JSONObject().put("ok", false)
                                         .put("sebab", "layanan tidak aktif").toString())
+                                } else if (kataAwal == "BACA") {
+                                    keluar.println(lay.bacaLayar(perintah))
+                                    keluar.flush()
                                 } else {
                                     val hasil = lay.bingkai(kataAwal == "BINGKAI")
                                     keluar.println(hasil.json.toString())

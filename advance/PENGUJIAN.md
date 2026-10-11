@@ -800,3 +800,53 @@ Atas perintah pemilik, prosedur LIHAT dijalankan ke Facebook:
 - Koreksi spec: misi-uji-standar.job langkah 6 TEMPEL -> ISI_TEKS
   (kedua salinan tersinkron; TEMPEL tidak dihapus dari runner —
   ia tetap sah untuk formulir yang menampilkannya).
+
+## V4.4/V4.4.1 "Mata Baca" — 11 Okt 2026 (bayu): OCR PP-OCRv5
+
+- V4.4 (kode 46): perintah BACA di 19102 — bingkai segar di-OCR di
+  PERANGKAT (RapidOCR PP-OCRv5 mobile det Latin + rec Latin, ONNX
+  Runtime Mobile 1.31.0, port Kotlin dari pipeline RapidOCR 1.4.4).
+  Argumen: BACA [ambang] [STATUSBAR]; gerbang baterai <30% tanpa cas.
+  APK 73.499.742 byte (sha256 b038264e...), signer kanonis.
+- Uji perangkat pertama: BACA LULUS fungsi — 26 baris layar Pengaturan
+  terbaca persis, skor 0,96-1,00; positif-palsu hanya glyph ikon
+  1 karakter berskor 0,52-0,68 (penyaring v1 membuang simbol-saja;
+  karakter alfanumerik 1 huruf masih lolos — dicatat).
+- TAPI latensi GAGAL target desain (<=4 dtk): 23,0 dtk panggilan
+  pertama; layar padat (Brave) tidak menjawab dalam 40 dtk.
+  Diagnosis dari membaca kode: tensorDet hanya menerapkan lantai
+  sisi 736, melewatkan plafon limit_side_len=960 pipeline asli —
+  deteksi berjalan di peta +/-896x2000.
+- V4.4.1 (kode 47, APK 73.503.838 byte, sha256 f02e4d82..., signer
+  kanonis): plafon 960 diterapkan (peta deteksi 448x960, 4,13x lebih
+  kecil; pemetaan koordinat terbukti tidak berubah). Terpasang -r.
+- Latensi sesudah perbaikan (bingkai 1080x2408): Brave padat 22,8
+  (dingin) / 19,4 / 39,5 dtk; Pengaturan ringan 29,8 / 30,7 dtk.
+  Varians besar; bukan didominasi kepadatan teks — biaya tetap
+  pipeline piksel penuh Kotlin + inferensi di CPU A13 memang kelas
+  ~20-40 dtk. TARGET <=4 DTK TIDAK TERCAPAI di semua konfigurasi.
+- KEPUTUSAN PENEMPATAN (sesuai klausa cadangan desain): jalur utama
+  Mata Baca = JALUR SERVER — BINGKAI dari HP di-OCR di VM
+  (advance/15/baca-server.py, format keluaran sama persis dengan
+  BACA). Terukur murni OCR di VM: KitaLulus 1,98 dtk (22 baris,
+  17/17 baris UI persis), layar Brave/Pengaturan 3,24 dtk (28 baris),
+  Facebook padat 6,56 dtk (139 baris; semua baris utama persis,
+  termasuk teks Indonesia postingan 0,996). Ujung-ke-ujung dingin
+  (termasuk muat model + ambil bingkai): 16,1 dtk terukur.
+  BACA di perangkat tetap terpasang sebagai cadangan luring
+  terakhir (akurat, lambat) — BUKAN jalur utama.
+- Regresi V4.2/V4.3 di V4.4.1: SEMUA sehat — PING, PAKET?, TEKS?,
+  CARI, POHON, ISI, KETUK, TAHAN, GESER, GLOBAL HOME/BACK,
+  TOMBOL 224, BINGKAI (segar, termasuk di Brave 406 KB dan Facebook
+  1,3 MB), AMBIL (tangkap otomatis oto_sukses bertambah, oto_gagal
+  0). Install -r dari V4.3.2 dan dari V4.4 sama-sama tanpa
+  uninstall/dialog; layanan terikat sendiri dalam hitungan detik.
+- Uji 3 layar desain: beranda KitaLulus (bingkai + OCR server:
+  sempurna), beranda Facebook (bingkai + OCR server: baris utama
+  sempurna), permukaan WebView diwakili halaman Brave (OCR di
+  perangkat 35 baris terbaca baik; OCR server pada bingkai
+  Pengaturan/Brave 28 baris baik).
+- Sisa utang rilis: potong ABI armeabi-v7a dari APK rilis (hemat
+  +/-24 MB; A13 arm64) — ditunda, tidak menghalangi fungsi;
+  salinan basi advance/10/src/ (drift lama) menunggu keputusan
+  pembersihan repo.
