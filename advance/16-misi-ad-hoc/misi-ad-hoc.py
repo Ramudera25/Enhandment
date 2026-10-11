@@ -100,6 +100,9 @@ POLL_UBAH = 0.02         # dtk — polling "keadaan berubah" sesudah tindakan (p
 # tekan-lama pakai TAHAN (pohon) / longClick (u2) native, geser-800 = cadangan.
 
 BATAS_UBAH = 1.2         # dtk — batas tunggu versi naik / hierarki berubah
+JENDELA_VERIFIKASI = 3.0  # dtk — jendela tenang VERIFIKASI: kondisi dinilai
+                         # berulang sampai jendela habis (transisi halaman
+                         # butuh waktu); yang diulang PENILAIAN, bukan aksi
 BATAS_UMUR_MS = 500      # ms — aturan §4: jawaban pohon lebih tua = ditolak
 COBA_BASI = 3            # kueri ulang maks. saat jawaban pohon basi
 # Patch (2) 9 Okt: plafon JEDA manual — permintaan tunggu perancang misi
@@ -1006,11 +1009,12 @@ class Runner:
         except Exception as e:
             return False, {"sumber": "dump", "sebab": str(e)[:80]}
 
-    def _jalankan_verifikasi(self, klausa):
-        """Satu klausa VERIFIKASI -> (ok, bukti dict). Kegagalan adalah
-        HASIL, bukan perkecualian: pemanggil yang memutuskan berhenti
-        atau (bila LEMBUT) mencatat peringatan. Tanpa coba-ulang buta,
-        tanpa turun kelas — bukti hanya dari mode yang berjalan."""
+    def _verifikasi_sekali(self, klausa):
+        """Satu penilaian sekejap atas klausa VERIFIKASI -> (ok, bukti
+        dict). Kegagalan adalah HASIL, bukan perkecualian: pemanggil
+        yang memutuskan berhenti atau (bila LEMBUT) mencatat
+        peringatan. Tanpa coba-ulang buta, tanpa turun kelas — bukti
+        hanya dari mode yang berjalan."""
         jenis, arg = klausa["jenis"], klausa["arg"]
         if jenis == "PAKET":
             try:
@@ -1047,6 +1051,30 @@ class Runner:
         if jenis == "TEKS_TIDAK_ADA":
             return (not ada), bukti
         return ada, bukti
+
+    def _jalankan_verifikasi(self, klausa):
+        """VERIFIKASI dengan jendela tenang: kondisi dinilai berulang
+        (poll 200 ms) sampai JENDELA_VERIFIKASI habis. Temuan uji
+        hidup 11 Okt 2026: ketuk "Add network" BERHASIL membuka
+        formulir, tetapi penilaian sekejap menangkap salinan pohon
+        sebelum simpul formulir masuk (versi hanya +1) -> negatif
+        palsu dan misi berhenti di langkah 3. Yang diulang di sini
+        adalah PENILAIAN atas keadaan, bukan aksinya — aksi tetap
+        tanpa coba-ulang. BACA_ADA dinilai sekali: satu panggilan
+        OCR sudah mahal dan ia membaca bingkai segar utuh."""
+        if klausa["jenis"] == "BACA_ADA":
+            return self._verifikasi_sekali(klausa)
+        t0 = time.time()
+        coba = 0
+        while True:
+            coba += 1
+            ok, bukti = self._verifikasi_sekali(klausa)
+            bukti["tunggu_verifikasi_ms"] = round(
+                (time.time() - t0) * 1000)
+            bukti["penilaian_ke"] = coba
+            if ok or (time.time() - t0) >= JENDELA_VERIFIKASI:
+                return ok, bukti
+            time.sleep(0.2)
 
     def _jalur_kartu(self, paket):
         import os

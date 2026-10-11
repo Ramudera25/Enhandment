@@ -850,3 +850,28 @@ Atas perintah pemilik, prosedur LIHAT dijalankan ke Facebook:
   +/-24 MB; A13 arm64) — ditunda, tidak menghalangi fungsi;
   salinan basi advance/10/src/ (drift lama) menunggu keputusan
   pembersihan repo.
+
+## Pengawas Misi — uji hidup 11 Okt 2026 (bayu)
+
+- Sinkron: runner misi-ad-hoc.py v2 (md5 8f69bb3f...) + 3 kartu
+  ke HP; md5 salinan HP = repo.
+- Jalan pertama misi-uji-standar: berhenti JUJUR di langkah 3 —
+  VERIFIKASI "Network name" GAGAL padahal ketuk "Add network"
+  BERHASIL (dibuktikan bingkai: formulir terbuka). Negatif palsu
+  timing: penilaian sekejap menangkap salinan sebelum simpul
+  formulir masuk (versi hanya +1, umur 311 ms).
+- Perbaikan (hari yang sama, bayu): VERIFIKASI kini memakai
+  JENDELA TENANG 3,0 dtk — kondisi dinilai berulang (poll 200 ms)
+  sampai jendela habis; yang diulang PENILAIAN, bukan aksi.
+  BACA_ADA tetap dinilai sekali. Bukti kini memuat
+  tunggu_verifikasi_ms + penilaian_ke. Harness luring tetap
+  21/21. Runner baru md5 1e1b4223..., tersinkron ke HP.
+- Jalan kedua: LULUS PENUH 9/9 langkah, 6,86 dtk, bukti di semua
+  klausa. Langkah 3 lolos pada penilaian ke-3 (426 ms);
+  TEKS_TIDAK_ADA langkah 9 lolos pada penilaian ke-4 (672 ms).
+- Uji negatif hidup: jangkar sengaja salah -> 15 penilaian dalam
+  3,1 dtk -> GAGAL -> misi berhenti TEPAT di langkah 1; langkah
+  berikutnya tidak pernah jalan. Sesuai definisi lulus desain.
+- Definisi lulus DESAIN-PENGAWAS-MISI: TERPENUHI seluruhnya
+  (misi standar ber-VERIFIKASI + bukti, uji negatif, kartu dipakai
+  runner saat BUKA, regresi v1 bersih via harness).
